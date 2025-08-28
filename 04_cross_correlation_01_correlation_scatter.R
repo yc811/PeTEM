@@ -112,6 +112,10 @@ colnames(ins3)[1] <- "gene_id"
 ins4 <- merge(ins3, TE_exp, by.x="V4", by="row.names")
 colnames(ins4)[colnames(ins4)=="Row.names"] <- "TE_id"
 
+ins_CG  <- merge(ins4, CG_TE,  by.x="V4", by.y="ID")
+ins_CHG <- merge(ins4, CHG_TE, by.x="V4", by.y="ID")
+ins_CHH <- merge(ins4, CHH_TE, by.x="V4", by.y="ID")
+
 #---- Scatter plots ----
 for(i in 1:(length(stages)-1)){
   for(j in (i+1):length(stages)){
@@ -127,10 +131,6 @@ for(i in 1:(length(stages)-1)){
     )
 
     # gene exp vs TE mC
-    ins_CG  <- merge(ins4, CG_TE,  by.x="V4", by.y="ID")
-    ins_CHG <- merge(ins4, CHG_TE, by.x="V4", by.y="ID")
-    ins_CHH <- merge(ins4, CHH_TE, by.x="V4", by.y="ID")
-
     plot_delta_scatter(ins_CG,
       paste0("dexp_", si, "_", sj), paste0("dTECG_", si, "_", sj),
       paste0("geneexp_TEmCG_change_", si, "_", sj, "_scatter.png"),
