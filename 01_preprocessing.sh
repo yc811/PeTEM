@@ -1,4 +1,28 @@
 #!/usr/bin/env bash
+#####################################
+# Input files
+#####################################
+# Annotation files
+### gene.bed --> gene annotation bed file: chr start end name 0 strand
+### TE.bed --> TE annotation bed file: chr start end name 0 strand
+### TE_families.bed --> one column with all TE families "unique" name
+### CDS.bed --> chr start end (name 0 strand)
+### 5UTR.bed --> chr start end (name 0 strand)
+### exon.bed --> chr start end (name 0 strand)
+### 3UTR.bed --> chr start end (name 0 strand)
+
+# Reference genome index
+### chrom.size --> chr length
+
+# Methylation data
+### stage_replicate.CGmap.gz --> .CGmap.gz files for all the replicates of each stage
+
+#Expression data
+### expression_gene.txt --> row name: gene ID; names of each column: stage name; value: average expression across replicates
+### expression_TE.txt --> row name: TE ID; names of each column: stage name; value: average expression across replicates
+
+
+#####################################
 set -euo pipefail
 
 #####################################
