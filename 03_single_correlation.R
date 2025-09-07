@@ -1,5 +1,7 @@
 #!/usr/bin/env Rscript
-# Rscript 03_single_correlation.R -g expression_gene.txt -t expression_TE.txt --ylim 40
+# Rscript 03_single_correlation.R -g expression_gene.txt -t expression_TE.txt \
+#   --wd_num 156 --ylim_CG 40 --ylim_CHG 5 --ylim_CHH 5 --ylim_TEexpTEmC_CH 8 --ylim_TEexpTEmC_CG 40
+
 
 start_time <- Sys.time()
 
@@ -12,7 +14,13 @@ library(optparse)
 option_list = list(
   make_option(c("-g", "--gene"), type="character", help="Gene expression file"),
   make_option(c("-t", "--TE"), type="character", help="TE expression file"),
-  make_option(c("--ylim"), type="numeric", default=100, help="ylim for gene exp vs TE mC plots")
+  make_option(c("--wd_num"), type="numeric", default=156, help="number of sliding window (default=156)"),
+#  make_option(c("--ylim"), type="numeric", default=100, help="ylim for gene exp vs TE/promoter mC plots (default=100)"),
+  make_option(c("--ylim_CG"), type="numeric", default=50, help="ylim for gene exp vs TE/promoter mC, CG (default=50)"),
+  make_option(c("--ylim_CHG"), type="numeric", default=10, help="ylim for gene exp vs TE/promoter mC, CHG (default=10)"),
+  make_option(c("--ylim_CHH"), type="numeric", default=10, help="ylim for gene exp vs TE/promoter mC, CHH (default=10)"),
+  make_option(c("--ylim_TEexpTEmC_CH"), type="numeric", default=15, help="ylim for TE exp vs TE mC, CH (default=15)"),
+  make_option(c("--ylim_TEexpTEmC_CG"), type="numeric", default=30, help="ylim for TE exp vs TE mC, CG (default=30)")
 )
 
 opt_parser = OptionParser(option_list=option_list)
@@ -27,29 +35,30 @@ sort_exp <- function(df, stage_exp){
 
 sliding <- function(vec){
   lth <- length(vec)
-  step <- floor(lth/100)
-  window <- lth-99*step
-  return(as.vector(rollapply(zoo(vec*100), width=window, by=step, FUN=mean, align="center")))
+  step <- floor(lth/opt$wd_num)
+  window <- lth-(opt$wd_num-1)*step
+  return(as.vector(rollapply(zoo(vec), width=window, by=step, FUN=mean, align="center")))
 }
 
 corr_mC <- function(df, exp, CG, CHG, CHH, method="pearson") {
+  log2exp<-as.numeric(log2(df[[exp]]))
   data.frame(
     Corr = c(
-      cor.test(df[[exp]], df[[CG]], method=method)$estimate,
-      cor.test(df[[exp]], df[[CHG]], method=method)$estimate,
-      cor.test(df[[exp]], df[[CHH]], method=method)$estimate
+      cor.test(log2exp, df[[CG]], method=method)$estimate,
+      cor.test(log2exp, df[[CHG]], method=method)$estimate,
+      cor.test(log2exp, df[[CHH]], method=method)$estimate
     ),
     Pvalue = c(
-      cor.test(df[[exp]], df[[CG]], method=method)$p.value,
-      cor.test(df[[exp]], df[[CHG]], method=method)$p.value,
-      cor.test(df[[exp]], df[[CHH]], method=method)$p.value
+      cor.test(log2exp, df[[CG]], method=method)$p.value,
+      cor.test(log2exp, df[[CHG]], method=method)$p.value,
+      cor.test(log2exp, df[[CHH]], method=method)$p.value
     ),
     row.names = c("CG", "CHG", "CHH")
   )
 }
 
 corr_exp <- function(df, x, y, method="pearson") {
-  corr <- cor.test(df[[x]], df[[y]], method=method)
+  corr <- cor.test(as.numeric(log2(df[[x]])), as.numeric(log2(df[[y]])), method=method)
   data.frame(Corr=corr$estimate, Pvalue=corr$p.value, row.names=paste(x, y, sep="_vs_"))
 }
 
@@ -190,29 +199,38 @@ for(stage in stages){
   gdf <- sort_exp(insGeneTEmC[,c("V4","V10",paste0(stage,"_exp"),paste0(stage,"_TEexp"),
                                  paste0(stage,"_TE_CG"),paste0(stage,"_TE_CHG"),paste0(stage,"_TE_CHH"))],
                   paste0(stage,"_exp"))
-  
-  TE_CG <- sliding(TEdf[[paste0(stage,"_TE_CG")]])
-  TE_CHG <- sliding(TEdf[[paste0(stage,"_TE_CHG")]])
-  TE_CHH <- sliding(TEdf[[paste0(stage,"_TE_CHH")]])
-  
-  gTE_CG <- sliding(gdf[[paste0(stage,"_TE_CG")]])
-  gTE_CHG <- sliding(gdf[[paste0(stage,"_TE_CHG")]])
-  gTE_CHH <- sliding(gdf[[paste0(stage,"_TE_CHH")]])
-  gTE_exp <- sliding(gdf[[paste0(stage,"_TEexp")]]/100)
-  
   pmC <- sort_exp(insGenePromC[,c("V4","V10",paste0(stage,"_exp"),paste0(stage,"_TEexp"),
                                   paste0(stage,"_promoterselves_CG"),paste0(stage,"_promoterselves_CHG"),paste0(stage,"_promoterselves_CHH"))],
                   paste0(stage,"_exp"))
-  pCG <- sliding(pmC[[paste0(stage,"_promoterselves_CG")]])
-  pCHG <- sliding(pmC[[paste0(stage,"_promoterselves_CHG")]])
-  pCHH <- sliding(pmC[[paste0(stage,"_promoterselves_CHH")]])
-  
   wo <- sort_exp(woTEGenePromC[,c("gene_id",paste0(stage),
-    paste0(stage,"_promoter_CG"),paste0(stage,"_promoter_CHG"),paste0(stage,"_promoter_CHH"))],
-                 paste0(stage))
-  woCG <- sliding(wo[[paste0(stage,"_promoter_CG")]])
-  woCHG <- sliding(wo[[paste0(stage,"_promoter_CHG")]])
-  woCHH <- sliding(wo[[paste0(stage,"_promoter_CHH")]])
+                                  paste0(stage,"_promoter_CG"),paste0(stage,"_promoter_CHG"),paste0(stage,"_promoter_CHH"))],
+                  paste0(stage))
+  
+
+  TEdf <- TEdf[(TEdf[[paste0(stage,"_exp")]] != 0) & (TEdf[[paste0(stage,"_TEexp")]] != 0), ]
+  gdf  <- gdf[(gdf[[paste0(stage,"_exp")]] != 0) & (gdf[[paste0(stage,"_TEexp")]] != 0), ]
+  pmC  <- pmC[(pmC[[paste0(stage,"_exp")]] != 0) & (pmC[[paste0(stage,"_TEexp")]] != 0), ]
+  wo   <- wo[(wo[[paste0(stage)]] != 0) , ]
+
+  pmC  <- pmC[, c(2,3,5,6,7)]
+  pmC <- unique(pmC)
+
+  TE_CG <- sliding(TEdf[[paste0(stage,"_TE_CG")]]*100)
+  TE_CHG <- sliding(TEdf[[paste0(stage,"_TE_CHG")]]*100)
+  TE_CHH <- sliding(TEdf[[paste0(stage,"_TE_CHH")]]*100)
+  
+  gTE_CG <- sliding(gdf[[paste0(stage,"_TE_CG")]]*100)
+  gTE_CHG <- sliding(gdf[[paste0(stage,"_TE_CHG")]]*100)
+  gTE_CHH <- sliding(gdf[[paste0(stage,"_TE_CHH")]]*100)
+  gTE_exp <- sliding(log2(gdf[[paste0(stage,"_TEexp")]]))
+  
+  pCG <- sliding(pmC[[paste0(stage,"_promoterselves_CG")]]*100)
+  pCHG <- sliding(pmC[[paste0(stage,"_promoterselves_CHG")]]*100)
+  pCHH <- sliding(pmC[[paste0(stage,"_promoterselves_CHH")]]*100)
+  
+  woCG <- sliding(wo[[paste0(stage,"_promoter_CG")]]*100)
+  woCHG <- sliding(wo[[paste0(stage,"_promoter_CHG")]]*100)
+  woCHH <- sliding(wo[[paste0(stage,"_promoter_CHH")]]*100)
   
   #---- Plotting ----
   CG_col <- "#CFA699"
@@ -226,13 +244,13 @@ for(stage in stages){
   png(file=paste0("TEexp_TEmC_line_",stage,".png"), width=2600,height=2200,res=400)
   par(mar=c(5,4.5,4,5)+0.1)
   plot(TE_CHG,lwd=5,lty=1,col=CHG_col,type="l",axes=FALSE,
-       ylim=c(0,15),xlim=c(0,100),xlab=NA,ylab=NA,xaxt='n')
+       ylim=c(0,opt$ylim_TEexpTEmC_CH),xlim=c(0,opt$wd_num),xlab=NA,ylab=NA,xaxt='n')
   lines(TE_CHH,lwd=5,lty=1,col=CHH_col)
   axis(4,las=1,cex.axis=1.5,font=2)
   mtext(expression(bold("mCH(%)")), side=4, line=3.5, cex=1.5)
   box()
   par(new=TRUE)
-  plot(TE_CG,lwd=5,lty=1,col=CG_col,type="l",axes=FALSE,ylim=c(0,30),xlim=c(0,100),xlab=NA,ylab=NA,xaxt='n')
+  plot(TE_CG,lwd=5,lty=1,col=CG_col,type="l",axes=FALSE,ylim=c(0,opt$ylim_TEexpTEmC_CG),xlim=c(0,opt$wd_num),xlab=NA,ylab=NA,xaxt='n')
   axis(2, col="black", las=1, cex.axis=1.5, font=2)
   mtext(expression(bold("mCG(%)")), side=2, line=3, cex=1.5)
   mtext("Lowly expressed TEs      Highly expressed TEs", side=1, line=1, cex=1.5, font=2)
@@ -243,7 +261,7 @@ for(stage in stages){
   # gene exp vs TE exp
   png(file=paste0("geneexp_TEexp_line_",stage,".png"), width=2600,height=2200,res=400)
   par(mar=c(5,4.5,4,5)+0.1)
-  plot(gTE_exp,lwd=5,lty=1,col="gray50",type="l",axes=FALSE,xlim=c(0,100),xlab=NA,ylab=NA,xaxt='n')
+  plot(gTE_exp,lwd=5,lty=1,col="gray50",type="l",axes=FALSE,xlim=c(0,opt$wd_num),xlab=NA,ylab=NA,xaxt='n')
   axis(2, ylim=c(0,1),col="black",las=1, cex.axis=1.5,font=2)
   mtext(expression(bold("TE expression (log2 RPKM)")),side=2,line=3,cex=1.5)
   mtext("Lowly expressed genes      Highly expressed genes", side=1, line=1, cex=1.5,font=2)
@@ -255,8 +273,9 @@ for(stage in stages){
   for(mtype in c("CG","CHG","CHH")){
     png(file=paste0("geneexp_TEm",mtype,"_line_",stage,".png"), width=2600,height=2200,res=400)
     par(mar=c(5, 5, 4, 5)+0.1)
+    ylim_val <- switch(mtype, CG=opt$ylim_CG, CHG=opt$ylim_CHG, CHH=opt$ylim_CHH)
     plot(get(paste0("wo",mtype)), lwd=5,lty=1,col=pro_woTE_col,type="l",axes=FALSE,
-         ylim=c(0,opt$ylim), xlim=c(0,100), xlab=NA, ylab=NA, xaxt='n')
+         ylim=c(0,ylim_val), xlim=c(0,opt$wd_num), xlab=NA, ylab=NA, xaxt='n')
     lines(get(paste0("p",mtype)), lwd=5,lty=1,col=pro_wTE_col)
     lines(get(paste0("gTE_",mtype)), lwd=5,lty=1,col=CG_col)
     axis(2, las=1, cex.axis=1.5, font=2)
@@ -267,6 +286,8 @@ for(stage in stages){
     grid(nx=NA, ny=NULL, col="gray70", lty=3, lwd=1)
     dev.off()
   }
+
+
   
   # Correlation tables
   # Pearson
