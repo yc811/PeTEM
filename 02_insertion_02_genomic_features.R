@@ -37,7 +37,11 @@ ins_IGR <- read.table(ins_IGR_file)
 TEnew <- read.table(TE_file)
 TEnew$V7 <- TEnew$V3 - TEnew$V2
 
-TE_ins <- function(df) sum(df$V3 - df$V2) + nrow(df)
+TE_ins <- function(df) {
+  df2 <- df[!duplicated(df[, c("V1", "V2", "V3")]), ]
+  return(sum(df2$V3 - df2$V2) + nrow(df2))
+}
+
 TE_insertion <- c(TE_ins(ins_gene), TE_ins(ins_CDS), TE_ins(ins_5UTR), TE_ins(ins_exon), 
                   TE_ins(ins_intron), TE_ins(ins_3UTR), TE_ins(ins_promoter), TE_ins(ins_IGR))
 TE_insertion2 <- TE_insertion*100/sum(as.numeric(TEnew$V7))
@@ -72,10 +76,14 @@ library(ggbreak)
 
 plot_bar <- function(values, ylab, title, yuplim){
   df <- data.frame(Region=factor(regions, levels=regions), Value=values)
+  df$label_y <- ifelse(df$Value < 0, 0, df$Value)  # text y position
+  df$vjust <- ifelse(df$Value < 0, -0.5, -0.5)     # adjust text position
+
   p <- ggplot(df, aes(x=Region, y=Value, fill=Region)) +
     geom_bar(stat="identity", color="black") +
-    geom_text(aes(label=sprintf("%.2f", Value)), vjust=-0.5, size=4, color="dodgerblue3") + 
-    expand_limits(y = max(df$Value) * yuplim) + 
+    geom_text(aes(x=Region, y=label_y, label=sprintf("%.2f", Value), vjust=vjust),
+              size=6.4, color="firebrick4", fontface="bold") +
+    expand_limits(y = max(df$Value) * yuplim) +
     scale_fill_manual(values=colors) +
     theme_classic(base_size=30) +
     theme(axis.text.x = element_text(angle=40, hjust=1),
@@ -87,7 +95,7 @@ plot_bar <- function(values, ylab, title, yuplim){
 
 #------------------
 png("Inserted_genomic_feature_enrichment.png", width=2000, height=1800, res=300)
-plot_bar(TEinsert_enrich, "Log2 enrichment", "TE insertion", 1.4)
+plot_bar(TEinsert_enrich, "Log2 enrichment", "TE insertion", 1.8)
 dev.off()
 
 png("Inserted_genomic_feature_percentage.png", width=2000, height=1800, res=300)
