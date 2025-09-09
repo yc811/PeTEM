@@ -1,4 +1,4 @@
-# Rscript 04_cross_correlation_01_correlation_scatter.R -g DEG.txt -t DETE.txt 
+# Rscript 04_cross_correlation_01_correlation_scatter.R 
 
 start_time <- Sys.time()
 
