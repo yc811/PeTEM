@@ -34,30 +34,29 @@ sort -k1,1 -k2,2n "$utr5" > UTR5_sort.bed
 sort -k1,1 -k2,2n "$utr3" > UTR3_sort.bed
 sort -k1,1 -k2,2n "$promoter" > promoter_sort.bed
 sort -k1,1 -k2,2n "$te" > TE_sort.bed
-
-# Merge with no strand info
-bedtools merge -i gene_sort.bed -c 4,5,6 -o distinct,distinct,distinct > merge_2strands_gene.bed
-bedtools merge -i CDS_sort.bed -c 4,5,6 -o distinct,distinct,distinct > merge_2strands_CDS.bed
-bedtools merge -i exon_sort.bed -c 4,5,6 -o distinct,distinct,distinct > merge_2strands_exon.bed
-bedtools merge -i UTR5_sort.bed -c 4,5,6 -o distinct,distinct,distinct > merge_2strands_5UTR.bed
-bedtools merge -i UTR3_sort.bed -c 4,5,6 -o distinct,distinct,distinct > merge_2strands_3UTR.bed
-bedtools merge -i promoter_sort.bed -c 4,5,6 -o distinct,distinct,distinct > merge_2strands_promoter.bed
-bedtools merge -i TE_sort.bed -c 4,5,6 -o distinct,distinct,distinct > merge_2strands_TE.bed
-
 # Intron
 bedtools subtract -a gene_sort.bed -b exon_sort.bed -s > intron.bed
 sort -k1,1 -k2,2n -k3,3n intron.bed > intron_sort.bed
-bedtools merge -i intron_sort.bed -c 4,5,6 -o distinct,distinct,distinct > merge_2strands_intron.bed
-
 # IGR
+bedtools merge -i gene_sort.bed > merge_2strands_gene.bed
+
 bedtools subtract -a "$genome" -b merge_2strands_gene.bed > IGR_nostrand.bed
 sort -k1,1 -k2,2n -k3,3n IGR_nostrand.bed > IGR_nostrand_sort.bed
-awk -F"\t" '{print $0 "\tIGR_"NR "\t0\t+"}' IGR_nostrand_sort.bed > IGR_nostrand_sort_name.bed
-bedtools merge -i IGR_nostrand_sort_name.bed -c 4,5,6 -o distinct,distinct,distinct > merge_2strands_IGR.bed
+
+# Merge with no strand info
+bedtools merge -i CDS_sort.bed > merge_2strands_CDS.bed
+bedtools merge -i exon_sort.bed > merge_2strands_exon.bed
+bedtools merge -i UTR5_sort.bed > merge_2strands_5UTR.bed
+bedtools merge -i UTR3_sort.bed > merge_2strands_3UTR.bed
+bedtools merge -i promoter_sort.bed > merge_2strands_promoter.bed
+bedtools merge -i TE_sort.bed > merge_2strands_TE.bed
+
+bedtools merge -i intron_sort.bed > merge_2strands_intron.bed
+bedtools merge -i IGR_nostrand_sort.bed > merge_2strands_IGR.bed
 
 # Intersect TE with regions
 for region in gene CDS 5UTR exon intron 3UTR promoter IGR; do
-    bedtools intersect -a merge_2strands_TE.bed -b merge_2strands_${region}.bed -wa > TE_on_${region}.bed
+    bedtools intersect -a merge_2strands_TE.bed -b merge_2strands_${region}.bed > TE_on_${region}.bed
 done
 
 #------------------
