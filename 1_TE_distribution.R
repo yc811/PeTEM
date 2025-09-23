@@ -1,4 +1,4 @@
-# Rscript 02_insertion_02_genomic_features.R
+# Rscript 1_TE_distribution.R
 start_time <- Sys.time()
 
 args <- commandArgs(trailingOnly = TRUE)
@@ -39,7 +39,7 @@ TEnew$V7 <- TEnew$V3 - TEnew$V2
 
 TE_ins <- function(df) {
   df2 <- df[!duplicated(df[, c("V1", "V2", "V3")]), ]
-  return(sum(df2$V3 - df2$V2) + nrow(df2))
+  return(sum(df2$V3 - df2$V2) )
 }
 
 TE_insertion <- c(TE_ins(ins_gene), TE_ins(ins_CDS), TE_ins(ins_5UTR), TE_ins(ins_exon), 
@@ -58,7 +58,7 @@ IGR <- read.table(IGR_file)
 genome <- read.table(genome_file)
 
 genome_percent <- function(df){
-  df$V7 <- (df$V3 - df$V2) + 1
+  df$V7 <- (df$V3 - df$V2) 
   sum(df$V7)*100/sum(genome$V3)
 }
 
@@ -94,12 +94,12 @@ plot_bar <- function(values, ylab, title, yuplim){
 }
 
 #------------------
-png("Inserted_genomic_feature_enrichment.png", width=2000, height=1800, res=300)
-plot_bar(TEinsert_enrich, "Log2 enrichment", "TE insertion", 1.8)
+png("01_TE_distribution_enrichment.png", width=2000, height=1800, res=300)
+plot_bar(TEinsert_enrich, "Log2 enrichment", "TE distribution", 1.8)
 dev.off()
 
-png("Inserted_genomic_feature_percentage.png", width=2000, height=1800, res=300)
-plot_bar(TE_insertion2, "Percentage (%)", "TE insertion", 1.2)
+png("01_TE_distribution_percentage.png", width=2000, height=1800, res=300)
+plot_bar(TE_insertion2, "Percentage (%)", "TE distribution", 1.2)
 dev.off()
 
 end_time <- Sys.time()
