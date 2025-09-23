@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-# Rscript 03_single_correlation.R -g expression_gene.txt -t expression_TE.txt \
+# Rscript 4_single_condition_correlation.R -eg expression_gene.txt -et expression_TE.txt -unexp y/n \
 #   --wd_num 156 --ylim_CG 40 --ylim_CHG 5 --ylim_CHH 5 --ylim_TEexpTEmC_CH 8 --ylim_TEexpTEmC_CG 40
 
 
@@ -12,10 +12,10 @@ library(optparse)
 
 #---- Option parser ----
 option_list = list(
-  make_option(c("-g", "--gene"), type="character", help="Gene expression file"),
-  make_option(c("-t", "--TE"), type="character", help="TE expression file"),
+  make_option(c("-eg", "--geneexp"), type="character", help="Gene expression file"),
+  make_option(c("-et", "--TEexp"), type="character", help="TE expression file"),
+  make_option(c("-unexp", "--include_unexp"), type="character", default="n", help="Include unexpressed TEs for sliding plots? (y/n)"),
   make_option(c("--wd_num"), type="numeric", default=156, help="number of sliding window (default=156)"),
-#  make_option(c("--ylim"), type="numeric", default=100, help="ylim for gene exp vs TE/promoter mC plots (default=100)"),
   make_option(c("--ylim_CG"), type="numeric", default=50, help="ylim for gene exp vs TE/promoter mC, CG (default=50)"),
   make_option(c("--ylim_CHG"), type="numeric", default=10, help="ylim for gene exp vs TE/promoter mC, CHG (default=10)"),
   make_option(c("--ylim_CHH"), type="numeric", default=10, help="ylim for gene exp vs TE/promoter mC, CHH (default=10)"),
@@ -25,6 +25,8 @@ option_list = list(
 
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
+
+include_unexp <- tolower(opt$include_unexp) == "y"
 
 #---- Functions ----
 sort_exp <- function(df, stage_exp){
@@ -38,6 +40,12 @@ sliding <- function(vec){
   step <- floor(lth/opt$wd_num)
   window <- lth-(opt$wd_num-1)*step
   return(as.vector(rollapply(zoo(vec), width=window, by=step, FUN=mean, align="center")))
+}
+
+calc_window <- function(df){
+  step <- floor(nrow(df)/opt$wd_num)
+  window <- nrow(df)-(opt$wd_num-1)*step
+  return(window)
 }
 
 corr_mC <- function(df, exp, CG, CHG, CHH, method="pearson") {
@@ -110,13 +118,13 @@ plot_corr_bar <- function(stage, gdf, TEdf, method="pearson") {
 
 
 #---- Read expression ----
-gene_exp <- read.table(opt$gene, header=TRUE, sep="\t", row.names=1)
-#gene_exp<-read.table("expression_gene.txt", header=T, sep="\t") 
-gene_exp <- gene_exp[rowSums(gene_exp) != 0, ]
+gene_exp <- read.table(opt$geneexp, header=TRUE, sep="\t", row.names=1)
+#gene_exp<-read.table("tttgene.txt", header=T, sep="\t", row.names=1) 
+gene_exp <- gene_exp[rowSums(gene_exp) != 0, , drop=FALSE]  # drop unexpressed genes
 
-TE_exp <- read.table(opt$TE, header=TRUE, sep="\t", row.names=1)
-#TE_exp<-read.table("expression_TE.txt", header=T, sep="\t") 
-TE_exp <- TE_exp[rowSums(TE_exp) != 0, ]
+TE_exp <- read.table(opt$TEexp, header=TRUE, sep="\t", row.names=1)
+#TE_exp<-read.table("tttTE.txt", header=T, sep="\t", row.names=1) 
+#TE_exp <- TE_exp[rowSums(TE_exp) != 0, ]
 
 #---- Determine stages ----
 stages <- intersect(colnames(gene_exp), colnames(TE_exp))
@@ -142,7 +150,7 @@ CHG_promoterselves$ID <- sub("_[0-9]+$", "", CHG_promoterselves$ID)
 CHH_promoterselves$ID <- sub("_[0-9]+$", "", CHH_promoterselves$ID)
 
 
-ins_promoter <- read.table("TE_overlap_promoter_u1500_d500.bed", header=FALSE)
+ins_promoter <- read.table("TE_overlap_promoter.bed", header=FALSE)
 ins_promoter2 <- ins_promoter[,c("V4","V10")]
 
 #---- Loop over stages ----
@@ -205,12 +213,23 @@ for(stage in stages){
   wo <- sort_exp(woTEGenePromC[,c("gene_id",paste0(stage),
                                   paste0(stage,"_promoter_CG"),paste0(stage,"_promoter_CHG"),paste0(stage,"_promoter_CHH"))],
                   paste0(stage))
-  
 
+
+  # remove unexpressed genes/TEs
   TEdf <- TEdf[(TEdf[[paste0(stage,"_exp")]] != 0) & (TEdf[[paste0(stage,"_TEexp")]] != 0), ]
-  gdf  <- gdf[(gdf[[paste0(stage,"_exp")]] != 0) & (gdf[[paste0(stage,"_TEexp")]] != 0), ]
-  pmC  <- pmC[(pmC[[paste0(stage,"_exp")]] != 0) & (pmC[[paste0(stage,"_TEexp")]] != 0), ]
+
+  gdfexp <- gdf
+  gdfexp  <- gdfexp[(gdfexp[[paste0(stage,"_exp")]] != 0) & (gdfexp[[paste0(stage,"_TEexp")]] != 0), ]
+
   wo   <- wo[(wo[[paste0(stage)]] != 0) , ]
+
+  if(include_unexp){
+    gdf  <- gdf[(gdf[[paste0(stage,"_exp")]] != 0), ]
+    pmC  <- pmC[(pmC[[paste0(stage,"_exp")]] != 0), ]
+  } else {
+    gdf  <- gdf[(gdf[[paste0(stage,"_exp")]] != 0) & (gdf[[paste0(stage,"_TEexp")]] != 0), ]
+    pmC  <- pmC[(pmC[[paste0(stage,"_exp")]] != 0) & (pmC[[paste0(stage,"_TEexp")]] != 0), ]
+  }
 
   pmC  <- pmC[, c(2,3,5,6,7)]
   pmC <- unique(pmC)
@@ -222,7 +241,7 @@ for(stage in stages){
   gTE_CG <- sliding(gdf[[paste0(stage,"_TE_CG")]]*100)
   gTE_CHG <- sliding(gdf[[paste0(stage,"_TE_CHG")]]*100)
   gTE_CHH <- sliding(gdf[[paste0(stage,"_TE_CHH")]]*100)
-  gTE_exp <- sliding(log2(gdf[[paste0(stage,"_TEexp")]]))
+  gTE_exp <- sliding(log2(gdfexp[[paste0(stage,"_TEexp")]]))
   
   pCG <- sliding(pmC[[paste0(stage,"_promoterselves_CG")]]*100)
   pCHG <- sliding(pmC[[paste0(stage,"_promoterselves_CHG")]]*100)
@@ -232,6 +251,14 @@ for(stage in stages){
   woCHG <- sliding(wo[[paste0(stage,"_promoter_CHG")]]*100)
   woCHH <- sliding(wo[[paste0(stage,"_promoter_CHH")]]*100)
   
+  # window sizes
+  TE_window <- calc_window(TEdf)
+  g_window  <- calc_window(gdf)
+  gexp_window  <- calc_window(gdfexp)
+  #pmC_window <- calc_window(pmC)
+  wo_window <- calc_window(wo)
+
+
   #---- Plotting ----
   CG_col <- "#CFA699"
   CHG_col <- "#71A061"
@@ -247,15 +274,16 @@ for(stage in stages){
        ylim=c(0,opt$ylim_TEexpTEmC_CH),xlim=c(0,opt$wd_num),xlab=NA,ylab=NA,xaxt='n')
   lines(TE_CHH,lwd=5,lty=1,col=CHH_col)
   axis(4,las=1,cex.axis=1.5,font=2)
-  mtext(expression(bold("mCH(%)")), side=4, line=3.5, cex=1.5)
+  mtext(expression(bold("TE mCH(%)")), side=4, line=3.5, cex=1.5)
   box()
   par(new=TRUE)
   plot(TE_CG,lwd=5,lty=1,col=CG_col,type="l",axes=FALSE,ylim=c(0,opt$ylim_TEexpTEmC_CG),xlim=c(0,opt$wd_num),xlab=NA,ylab=NA,xaxt='n')
   axis(2, col="black", las=1, cex.axis=1.5, font=2)
-  mtext(expression(bold("mCG(%)")), side=2, line=3, cex=1.5)
+  mtext(expression(bold("TE mCG(%)")), side=2, line=3, cex=1.5)
   mtext("Lowly expressed TEs      Highly expressed TEs", side=1, line=1, cex=1.5, font=2)
   legend("topright", c("CG","CHG","CHH"), text.font=2,bty='n',lty=1,lwd=6,col=c(CG_col,CHG_col,CHH_col),cex=1.8)
   grid(nx=NA, ny=NULL, col="gray70", lty=3, lwd=1)
+  mtext(paste0("TEs: ", nrow(TEdf), ", window size: ", TE_window), side=1, line=4, cex=1.2)
   dev.off()
   
   # gene exp vs TE exp
@@ -267,6 +295,7 @@ for(stage in stages){
   mtext("Lowly expressed genes      Highly expressed genes", side=1, line=1, cex=1.5,font=2)
   grid(nx=NA,ny=NULL,col="gray70",lty=3,lwd=1)
   box()
+  mtext(paste0("TE-gene pairs: ", nrow(gdfexp), ", window size: ", gexp_window), side=1, line=4, cex=1.2)
   dev.off()
   
   # gene exp vs TE/promoter mC
@@ -284,6 +313,8 @@ for(stage in stages){
     legend("topright", c("TE", "Promoters w TEs", "Promoters w/o TEs"), text.font=2, bty='n', lty=1, lwd=5, col=c(CG_col, pro_wTE_col, pro_woTE_col), cex=1.8)
     box()
     grid(nx=NA, ny=NULL, col="gray70", lty=3, lwd=1)
+    mtext(paste0("TE-gene pairs: ", nrow(gdf), ", window size: ", g_window), side=1, line=4, cex=1.2)
+    mtext(paste0("Promoters w/o TEs: ", nrow(wo), ", window size: ", wo_window), side=1, line=5, cex=1.2)
     dev.off()
   }
 
