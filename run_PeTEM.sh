@@ -67,8 +67,8 @@ fi
 
 # Promoter upstream/downstream length
 if [[ "$run0" == "y" ]]; then
-  read -p "Promoter upstream length (default 1500): " up
-  read -p "Promoter downstream length (default 500): " dn
+  read -p "Promoter upstream length from TSS (default 1500): " up
+  read -p "Promoter downstream length from TSS (default 500): " dn
   up=${up:-1500}
   dn=${dn:-500}
 fi
