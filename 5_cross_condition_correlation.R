@@ -1,4 +1,4 @@
-# Rscript 04_cross_correlation_01_correlation_scatter.R 
+# Rscript 5_cross_condition_correlation.R -deg DEG.txt -det DETE.txt -unexp "$unexp" 
 
 start_time <- Sys.time()
 
@@ -8,6 +8,20 @@ library(ggpointdensity)
 library(viridis)
 library(reshape2)
 library(stringr)
+
+
+#---- Option parser ----
+option_list = list(
+  make_option(c("-deg", "--DEG"), type="character", help="Gene expression DEG file"),
+  make_option(c("-det", "--DETE"), type="character", help="TE expression DETE file"),
+  make_option(c("-unexp", "--include_unexp"), type="character", default="n", help="Include unexpressed TEs? (y/n)")
+)
+
+opt_parser = OptionParser(option_list=option_list)
+opt = parse_args(opt_parser)
+
+include_unexp <- tolower(opt$include_unexp) == "y"
+
 
 #---- Helper functions ----
 quadrant_counts <- function(df, xx, yy) {
@@ -33,6 +47,15 @@ plot_delta_scatter <- function(df, x, y, fname, title, xlab, ylab){
   xlim <- max(abs(df[[x]]), na.rm=TRUE)
   ylim <- max(abs(df[[y]]), na.rm=TRUE)
 
+  # ---- Chi-square test (Q1+Q3 vs Q2+Q4) ----
+  group1 <- counts["Q1"] + counts["Q3"]
+  group2 <- counts["Q2"] + counts["Q4"]
+  chisq_tbl <- matrix(c(group1, group2), nrow=2)
+  chisq_res <- chisq.test(chisq_tbl)
+  pval_text <- paste0("Chi-squared p = ", signif(chisq_res$p.value, 3))
+
+  caption_text <- paste(eq_text, pval_text, sep="\n")
+
   png(file=fname, width=3000, height=2500, res=400)
   p <- ggplot(df, aes_string(x=x, y=y)) +
     geom_pointdensity(adjust=0.5, size=2) + 
@@ -55,7 +78,7 @@ plot_delta_scatter <- function(df, x, y, fname, title, xlab, ylab){
           panel.grid.minor=element_blank(),
           plot.title=element_text(size=20, face="bold", hjust=0.5),
           plot.caption=element_text(size=10, hjust=0)) +
-    labs(title=title, caption = eq_text, color="Number of\nneighboring\npoints\n ", x=xlab, y=ylab)
+    labs(title=title, caption = caption_text, color="Number of\nneighboring\npoints\n ", x=xlab, y=ylab)
   print(p)
 
   dev.off()
@@ -63,9 +86,21 @@ plot_delta_scatter <- function(df, x, y, fname, title, xlab, ylab){
 }
 
 #---- Read expression ----
-gene_exp<-read.table("DEG.txt", header=T, sep="\t") 
-TE_exp<-read.table("DETE.txt", header=T, sep="\t") 
+gene_exp<-read.table(opt$DEG, header=T, sep="\t") 
+TE_exp<-read.table(opt$DETE, header=T, sep="\t") 
 
+#---- filter unexpressed ----
+gene_stage_cols <- setdiff(colnames(gene_exp), grep("^(logFC_|PValue_|FDR_)", colnames(gene_exp), value=TRUE))
+TE_stage_cols   <- setdiff(colnames(TE_exp), grep("^(logFC_|PValue_|FDR_)", colnames(TE_exp), value=TRUE))
+
+gene_exp <- gene_exp[rowSums(gene_exp[, gene_stage_cols, drop=FALSE]) != 0, , drop=FALSE]
+
+if(!include_unexp){
+  TE_exp <- TE_exp[rowSums(TE_exp[, TE_stage_cols, drop=FALSE]) != 0, , drop=FALSE]
+}
+
+
+#---- Rename columns ----
 colnames(gene_exp) <- gsub("^logFC_", "dexp_", colnames(gene_exp))
 colnames(TE_exp)   <- gsub("^logFC_", "dTEexp_", colnames(TE_exp))
 colnames(gene_exp) <- gsub("^PValue_", "PV_g_", colnames(gene_exp))
@@ -80,7 +115,9 @@ CHH_TE <- read.table("TE_CHH_tab.txt", header=TRUE, sep="\t")
 
 # follow order of stages in delta expression files
 fc_cols <- grep("^dexp_", colnames(gene_exp), value=TRUE)
-stages_pairs <- str_match(fc_cols, "^dexp_([A-Z]+)_([A-Z]+)$")[,2:3]
+tmp <- str_match(fc_cols, "^dexp_([A-Za-z0-9]+)_([A-Za-z0-9]+)$")[,2:3]
+if(is.null(nrow(tmp))) tmp <- matrix(tmp, nrow=1) 
+stages_pairs <- tmp
 
 # calculate delta methylation
 for(k in seq_len(nrow(stages_pairs))){
@@ -93,7 +130,7 @@ for(k in seq_len(nrow(stages_pairs))){
 }
 
 #---- Merge with promoter overlaps ----
-ins_promoter <- read.table("TE_overlap_promoter_u1500_d500.bed", header=FALSE)
+ins_promoter <- read.table("TE_overlap_promoter.bed", header=FALSE)
 ins_promoter2 <- ins_promoter[,c("V4","V10")]
 
 ins3 <- merge(gene_exp, ins_promoter2, by.x="row.names", by.y="V10")
@@ -165,6 +202,7 @@ plot_gene_TE_box <- function(df_subset, mC_type, si, sj, mode="Q2"){
           axis.text.y=element_text(face="bold", size=18))
   
   ggsave(filename=paste0(mode,"_boxplot_", mC_type, "_", si, "_", sj,".png"), p, width=6, height=5)
+  print(p)
 }
 
 #---- Scatter plots + Q2/Q4 boxplots ----
