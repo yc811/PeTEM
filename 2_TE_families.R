@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 
-# Rscript 02_insertion_01_TE_families.R -a TE.bed -i TE_overlap_promoter_u1500_d500.bed -T TE_family.txt 
+# Rscript 2_TE_families.R -a TE.bed -i TE_overlap_promoter.bed -T TE_family.txt 
 
 start_time <- Sys.time()
 
@@ -76,14 +76,14 @@ for(i in seq_len(nrow(df_TE))){
   p_list[i] <- fisher.test(contingency)$p.value
 }
 
-df_TE$pvalue_num <- p_list              # 用於排序
+df_TE$pvalue_num <- p_list              # for order
 df_TE$pvalue <- format.pval(p_list, digits=3, scientific=TRUE)
 
 # labels
 df_TE$text <- paste0(df_TE$TE, " (", sprintf("%.2f", df_TE$enrich), ", p=", df_TE$pvalue, ")")
 df_TE$text_y <- 100-(cumsum(df_TE$pc_df2) - df_TE$pc_df2/2)
 
-# long format (不用 tidyr)
+# long format 
 df_long <- data.frame(
   TE = rep(df_TE$TE, times=2),
   type = rep(c("All TEs","Inserted TEs"), each=nrow(df_TE)),
@@ -115,11 +115,9 @@ png(file="Insertion_TE_family_enrichment.png", width=4500, height=2200, res=400)
 ggplot(df_long, aes(x = type, y = percentage, alluvium = TE)) +
   geom_alluvium(aes(fill = TE), width = 0.3, alpha = 0.6) +
   geom_stratum(aes(stratum = TE, fill = TE), width = 0.3) +
-  # 實線連接 bar 和文字
   geom_segment(data = df_label,
                aes(x = 2.12, xend = 2.5, y = y_start, yend = y_end),
                color = "gray30", linewidth = 0.7, inherit.aes = FALSE) +
-  # 標註文字
   geom_text(data = df_label,
             aes(x = 2.6, y = y_end, label = text),
             hjust = 0, size = 6, inherit.aes = FALSE) +
