@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-LOG="03_single_01_distance.log"
+LOG="3_2_TE_impact_distance_plot.log"
 echo "[`date`] Pipeline started" | tee $LOG
 
 start_allall=$(date +%s)
@@ -10,13 +10,19 @@ start_allall=$(date +%s)
 # usage
 # ====================
 usage() {
-    echo "Usage: bash 03_single_01_distance.sh -g gene.bed -t TE.bed -eg expression_gene.txt -et expression_TE.txt -lim 15000 -tick 5000 -WD 200" 
+    echo "Usage: bash 3_2_TE_impact_distance_plot.sh -g gene.bed -t TE.bed -eg expression_gene.txt -et expression_TE.txt -lim 15000 -tick 5000 -WD 200 -unexp y/n"
     exit 1
 }
+
 
 # ====================
 # parse args
 # ====================
+LIMIT=15000  #default
+MAJOR_TICK=5000  #default
+WD=200  #default
+INCLUDE_UNEXPRESSED_TE="n"
+
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
@@ -27,9 +33,13 @@ while [[ $# -gt 0 ]]; do
     -lim) LIMIT="$2"; shift 2 ;;
     -tick) MAJOR_TICK="$2"; shift 2 ;;
     -WD) WD="$2"; shift 2 ;;
+    -unexp) INCLUDE_UNEXPRESSED_TE="$2"; shift 2 ;;
     *) usage ;;
   esac
 done
+
+sort -k1,1 -k2,2n "$GENE_BED" > gene_sort.bed
+sort -k1,1 -k2,2n "$TE_BED" > TE_sort.bed
 
 echo "[`date`] Input files parsed" | tee -a $LOG
 
@@ -37,19 +47,24 @@ echo "[`date`] Input files parsed" | tee -a $LOG
 # step 1: preprocessing: find out TEs locating near genes
 # ====================
 echo "[`date`] Step 1. Preprocessing: find out TEs locating near genes" | tee -a $LOG
+read -p "Do you want to include unexpressed TEs? (y/n): " INCLUDE_UNEXPRESSED_TE
 
-Rscript - "$GENE_BED" "$TE_BED" "$GENE_EXP" "$TE_EXP"  <<'EOF' 
+Rscript - "$GENE_EXP" "$TE_EXP"  "$INCLUDE_UNEXPRESSED_TE" <<'EOF' 
 
 args <- commandArgs(trailingOnly=TRUE)
-gene_bed <- args[1]
-TE_bed   <- args[2]
-gene_exp <- args[3]
-TE_exp   <- args[4]
+gene_exp <- args[1]
+TE_exp   <- args[2]
+include_unexp <- args[3]
 
-gene_bed <- read.table(gene_bed, header=F, stringsAsFactors=F)
-TE_bed   <- read.table(TE_bed, header=F, stringsAsFactors=F)
+gene_bed <- read.table("gene_sort.bed", header=F, stringsAsFactors=F)
+TE_bed   <- read.table("TE_sort.bed", header=F, stringsAsFactors=F)
 gene_exp    <- read.table(gene_exp, header=T, stringsAsFactors=F)
 TE_exp    <- read.table(TE_exp, header=T, stringsAsFactors=F)
+
+gene_exp <- gene_exp[rowSums(gene_exp) != 0, , drop=FALSE]  # drop unexpressed genes
+if(tolower(include_unexp) != "y"){
+    te_exp <- te_exp[rowSums(te_exp) != 0, , drop=FALSE]  # keep unexpressed TEs only when users needed
+}
 
 gene_bed2 <- gene_bed[gene_bed$V4 %in% row.names(gene_exp), ]
 TE_bed2   <- TE_bed[TE_bed$V4 %in% row.names(TE_exp), ]
@@ -66,14 +81,13 @@ bedtools closest -a expressed_gene.bed -b expressed_TE.bed -id -d -D a > expgene
 # ====================
 echo "[`date`] Step 2. Split highly/lowly expressed genes and neighbouring TE regions" | tee -a $LOG
 
-Rscript - "$GENE_BED" "$GENE_EXP" "$LIMIT" <<'EOF' 
+Rscript - "$GENE_EXP" "$LIMIT" <<'EOF' 
 args <- commandArgs(trailingOnly=TRUE)
 
-gene_bed <- args[1]
-gene_exp <- args[2]
-limit <- as.numeric(args[3])
+gene_exp <- args[1]
+limit <- as.numeric(args[2])
 
-gene_bed <- read.table(gene_bed, header=F, stringsAsFactors=F)
+gene_bed <- read.table("gene_sort.bed", header=F, stringsAsFactors=F)
 gene_exp    <- read.table(gene_exp, header=T, stringsAsFactors=F)
 
 # function for adjacent regions
@@ -82,15 +96,15 @@ adjacent <- function(df, up=TRUE, limit=limit){
   if(up){
     # upstream
     df2[df2$V6=="+",3] <- df2[df2$V6=="+",2] - 1
-    df2[df2$V6=="+",2] <- df2[df2$V6=="+",3] - (limit-1)
+    df2[df2$V6=="+",2] <- df2[df2$V6=="+",3] - (limit)
     df2[df2$V6=="-",2] <- df2[df2$V6=="-",3] + 1
-    df2[df2$V6=="-",3] <- df2[df2$V6=="-",2] + (limit-1)
+    df2[df2$V6=="-",3] <- df2[df2$V6=="-",2] + (limit)
   } else {
     # downstream
     df2[df2$V6=="-",3] <- df2[df2$V6=="-",2] - 1
-    df2[df2$V6=="-",2] <- df2[df2$V6=="-",3] - (limit-1)
+    df2[df2$V6=="-",2] <- df2[df2$V6=="-",3] - (limit)
     df2[df2$V6=="+",2] <- df2[df2$V6=="+",3] + 1
-    df2[df2$V6=="+",3] <- df2[df2$V6=="+",2] + (limit-1)
+    df2[df2$V6=="+",3] <- df2[df2$V6=="+",2] + (limit)
   }
   df2$V2[df2$V2 < 1] <- 1
   df2[5] <- 0
@@ -107,6 +121,7 @@ gene_exp2 <- gene_exp[row.names(gene_exp) %in% clo_TE2$V4, ]
 
 # highly/lowly expressed genes for each stage
 stages <- colnames(gene_exp2)
+sink("3_2_TE_impact_distance_gene_TE_number.txt")
 
 for(stage in stages){
   vals <- gene_exp2[, stage, drop=FALSE]
@@ -135,84 +150,35 @@ for(stage in stages){
   write.table(high_up,  paste0("high_", stage, "_up.bed"),   row.names=F, col.names=F, quote=F, sep="\t")
   write.table(low_down, paste0("low_",  stage, "_down.bed"), row.names=F, col.names=F, quote=F, sep="\t")
   write.table(high_down,paste0("high_", stage, "_down.bed"), row.names=F, col.names=F, quote=F, sep="\t")
+
+  # count number
+  cat( stage, ":","\n")
+  cat("  Highly expressed gene number:", nrow(high_bed), "\n")
+  cat("  Lowly expressed gene number:", nrow(low_bed), "\n")
+  
+  # count TE nearby
+  high_genes <- high_bed$V4
+  low_genes  <- low_bed$V4
+
+  high_te <- length(unique(clo_TE2$V10[clo_TE2$V4 %in% high_genes]))
+  low_te  <- length(unique(clo_TE2$V10[clo_TE2$V4 %in% low_genes]))
+  
+  cat("  TEs nearby highly expressed genes:", high_te, "\n")
+  cat("  TEs nearby lowly expressed genes:", low_te,  "\n\n")
 }
+sink()
 EOF
 
 
 # ====================
-# step 3: process methylation files
-# ====================
-set -euo pipefail
-
-start_step3=$(date +%s)
-
-echo "[`date`] Step 3. Process methylation files: (1) unzip + filter" | tee -a $LOG
-
-mkdir -p methylation
-
-# Step1: unzip + filter
-for f in *.CGmap.gz; do
-(
-    start=$(date +%s)
-    base=${f%.CGmap.gz}
-    gunzip -c "$f" | awk '$8>=4 {print $1"\t"$3"\t"$2"\t"$4"\t"$6}' > "methylation/${base}.txt"
-    end=$(date +%s)
-    echo "[INFO] Preprocessed $f in $((end-start)) sec"
-)&
-done
-wait
-echo "[INFO] All replicates done."   | tee -a $LOG
-
-echo "[`date`] Step 3. Process methylation files: (2) calculate average mC of each site at each stage"   | tee -a $LOG
-
-stages=($(ls methylation/*.txt | xargs -n1 basename | cut -d'_' -f1 | sort -u))
-
-for stage in "${stages[@]}"; do
-(
-    start=$(date +%s)
-    echo "[INFO] Processing stage $stage"   | tee -a $LOG
-    python3 - <<EOF
-import pandas as pd, glob, os, time
-stage = "${stage}"
-files = glob.glob(f"methylation/{stage}_*.txt")
-
-dfs=[]
-for f in files:
-    df=pd.read_csv(f,sep="\t",header=None,
-                   names=["chr","site","nt","CNN","mC"])
-    dfs.append(df)
-
-combined = pd.concat(dfs, axis=0, ignore_index=True)
-m = combined.groupby(["chr","site","nt","CNN"], as_index=False)["mC"].mean()
-m = m.rename(columns={"mC": f"{stage}_mC"})
-
-m["strand"]=m.nt.replace({"C":"+","G":"-"})
-m["name"]=["site_"+str(i+1) for i in range(len(m))]
-
-for t in ["CG","CHG","CHH"]:
-    sub=m[m.CNN==t][["chr","site","site","name",f"{stage}_mC","strand"]].dropna()
-    sub.to_csv(f"{stage}_{t}.bed",sep="\t",index=False,header=False)
-EOF
-    end=$(date +%s)
-    echo "[INFO] Stage $stage done in $((end-start)) sec"   | tee -a $LOG
-)&
-done
-wait
-
-end_step3=$(date +%s)
-echo "[INFO] All stages done."   | tee -a $LOG
-echo "[`date`] Step 3. files finished in $((end_step3-start_step3)) sec"   | tee -a $LOG
-
-
-# ====================
-# step 4: intersect with TE / without TE
+# step 3: intersect with TE / without TE
 # ====================
 set -euo pipefail
 
 start_step4=$(date +%s)
-echo "[`date`] Step 4. TE methylation data" | tee -a $LOG
+echo "[`date`] Step 3. TE methylation data" | tee -a $LOG
 
-stages=($(ls *_up.bed | cut -d'_' -f2 | sort -u))  # 所有 stage
+stages=($(ls *_up.bed | cut -d'_' -f2 | sort -u))  # all stages
 
 for stage in "${stages[@]}"; do
 (
@@ -231,16 +197,7 @@ for stage in "${stages[@]}"; do
                 bedtools intersect -a "$wTE" -b "${stage}_${type}.bed" -wa -wb > "wTE_${expr}_${stage}_${dir}_${type}.bed"
             done
 
-            # 2. without TE
-            #woTE="woTE_${expr}_${stage}_${dir}.bed"
-            #bedtools subtract -a "$input" -b expressed_TE.bed > "$woTE"
-
-            #for type in CG CHG CHH; do
-            #    bedtools intersect -a "$woTE" -b "${stage}_${type}.bed" -wa -wb > "woTE_${expr}_${stage}_${dir}_${type}.bed"
-            #done
-
-            # remove step4 temp files
-            rm -f "$wTE" #"$woTE"
+            rm -f "$wTE" 
         done
     done
 
@@ -251,17 +208,17 @@ done
 wait
 
 end_step4=$(date +%s)
-echo "[`date`] Step 4. finished in $((end_step4-start_step4)) sec"   | tee -a $LOG
+echo "[`date`] Step 3. finished in $((end_step4-start_step4)) sec"   | tee -a $LOG
 
 
 
 # ====================
-# step 5: plotting
+# step 4: plotting
 # ====================
 set -euo pipefail
 
 start_step5=$(date +%s)
-echo "[`date`] Step5: Calculate methylation of the regions with TEs and plot (parallel stages)"   | tee -a $LOG
+echo "[`date`] Step4: Calculate methylation of the regions with TEs and plot (parallel stages)"   | tee -a $LOG
 
 # all stages
 stages=($(ls *_low_*_up*.bed | awk -F'_' '{print $3}' | sort -u))
@@ -437,7 +394,7 @@ done
 wait
 
 end_step5=$(date +%s)
-echo "[`date`] Step 5. finished in $((end_step5-start_step5)) sec"  | tee -a $LOG
+echo "[`date`] Step 4. finished in $((end_step5-start_step5)) sec"  | tee -a $LOG
 
 
 end_allall=$(date +%s)
