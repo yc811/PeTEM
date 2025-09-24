@@ -90,22 +90,23 @@ For parameters like promoter upstream/downstream length or plotting options, you
 ## Step 4: Output files
 After successful completion, outputs will include:
 * Step 0:
-    * Table showing numbers of promoter-embedded TEs and genes with TE embedded in promoters
-    * promoter.bed
-    * TE_overlap_promoter.bed: Names and location of promoter-embedded TEs and their neighbouring genes
-    * Tables showing methylation level of each TE, gene, promoter region under every condition
+    * `OUTPUT_0_embedded_TE_gene_number.txt`: Table showing numbers of promoter-embedded TEs and genes with TE embedded in promoters
+    * `promoter.bed`
+    * `TE_overlap_promoter.bed`: Names and location of promoter-embedded TEs and their neighbouring genes
+    * `Tab_*.txt`: Tables showing CG/CHG/CHH methylation level of each TE, gene, promoter region under every condition
 * Step 1:
-    * 01_TE_distribution_enrichment.png
-    * 01_TE_distribution_percentage.png
+    * `OUTPUT_1_TE_distribution_enrichment.png`
+    * `OUTPUT_1_TE_distribution_percentage.png`
 * Step 2:
-    * Promoter_embedded_TE_family.txt
-    * Promoter_embedded_TE_family_enrichment.png
+    * `OUTPUT_2_Promoter_embedded_TE_family_enrichment.png`
+    * `OUTPUT_2_Promoter_embedded_TE_family.txt`
 * Step 3:
-    * Figures of TE CG/CHG/CHH methylation around highly/lowly expressed genes under every condition
-    * In every figure, it shows the upstream and downstream border (bp) of TE methylation impact, and the number of  highly/lowly expressed genes
+    * `OUTPUT_3_TE_impact_distance_*.png`: Figures of TE CG/CHG/CHH methylation around highly/lowly expressed genes under every condition
+    * `OUTPUT_3_TE_impact_distance_gene_TE_number.txt`: In every figure, it shows the upstream and downstream border (bp) of TE methylation impact, and the number of  highly/lowly expressed genes
 * Step 4:
-    * Line plots showing correlations between (1) TE methylation vs TE expression, (2) TE methylation, methylation of promoters with TEs/with no TEs vs gene expression, (3) TE expression vs gene expression under each stage. The TE-gene pairs number and the smoothing window size also showed in each figure.
-    * Bar plots showing pearson's or spearman's correlation coefficient between (1) TE CG/CHG/CHH methylation vs TE expression, (2) TE CG/CHG/CHH methylation vs gene expression, (3) TE expression vs gene expression under each stage
+    * `OUTPUT_4_geneexp/TEexp_*.png`: Line plots showing correlations between (1) TE methylation vs TE expression, (2) TE methylation, methylation of promoters with TEs/with no TEs vs gene expression, (3) TE expression vs gene expression under each stage. The TE-gene pairs number and the smoothing window size also showed in each figure.
+    * `OUTPUT_4_correlation_*.png`: Bar plots showing pearson's or spearman's correlation coefficient between (1) TE CG/CHG/CHH methylation vs TE expression, (2) TE CG/CHG/CHH methylation vs gene expression, (3) TE expression vs gene expression under each stage
 * Step 5:
-    * Scatter plots showing correlations between changes of (1) TE CG/CHG/CHH methylation vs TE expression, (2) TE CG/CHG/CHH methylation vs gene expression, (3) TE expression vs gene expression comparing each two stages. The TE-gene pairs number and the regression line also showed in each figure.
-    * Box plots showing the expression and methylation level changes of those negatively correlated gene-TE pairs under each two stages. The name lists of those negatively correlated gene-TE pairs are also in the output.
+    * `OUTPUT_5_*_scatter.png`: Scatter plots showing correlations between changes of (1) TE CG/CHG/CHH methylation vs TE expression, (2) TE CG/CHG/CHH methylation vs gene expression, (3) TE expression vs gene expression comparing each two stages. The TE-gene pairs number and the regression line also showed in each figure.
+    * `OUTPUT_5_Q2/4_boxplot_*.png`: Box plots showing the expression and methylation level changes of those negatively correlated gene-TE pairs under each two stages.
+    * `OUTPUT_5_Q2/4_*.txt`: The name lists of those negatively correlated gene-TE pairs are also in the output.
