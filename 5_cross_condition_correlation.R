@@ -86,8 +86,8 @@ plot_delta_scatter <- function(df, x, y, fname, title, xlab, ylab){
 }
 
 #---- Read expression ----
-gene_exp<-read.table(opt$DEG, header=T, sep="\t") 
-TE_exp<-read.table(opt$DETE, header=T, sep="\t") 
+gene_exp<-read.table(opt$DEG, row.names=1, header=T, sep="\t") 
+TE_exp<-read.table(opt$DETE, row.names=1, header=T, sep="\t") 
 
 #---- filter unexpressed ----
 gene_stage_cols <- setdiff(colnames(gene_exp), grep("^(logFC_|PValue_|FDR_)", colnames(gene_exp), value=TRUE))
