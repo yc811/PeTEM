@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-LOG="3_2_TE_impact_distance_plot.log"
+LOG="LOG_3_2_TE_impact_distance_plot.log"
 echo "[`date`] Pipeline started" | tee $LOG
 
 start_allall=$(date +%s)
@@ -47,7 +47,6 @@ echo "[`date`] Input files parsed" | tee -a $LOG
 # step 1: preprocessing: find out TEs locating near genes
 # ====================
 echo "[`date`] Step 1. Preprocessing: find out TEs locating near genes" | tee -a $LOG
-read -p "Do you want to include unexpressed TEs? (y/n): " INCLUDE_UNEXPRESSED_TE
 
 Rscript - "$GENE_EXP" "$TE_EXP"  "$INCLUDE_UNEXPRESSED_TE" <<'EOF' 
 
@@ -63,7 +62,7 @@ TE_exp    <- read.table(TE_exp, header=T, stringsAsFactors=F)
 
 gene_exp <- gene_exp[rowSums(gene_exp) != 0, , drop=FALSE]  # drop unexpressed genes
 if(tolower(include_unexp) != "y"){
-    te_exp <- te_exp[rowSums(te_exp) != 0, , drop=FALSE]  # keep unexpressed TEs only when users needed
+    TE_exp <- TE_exp[rowSums(TE_exp) != 0, , drop=FALSE]  # keep unexpressed TEs only when users needed
 }
 
 gene_bed2 <- gene_bed[gene_bed$V4 %in% row.names(gene_exp), ]
@@ -121,7 +120,7 @@ gene_exp2 <- gene_exp[row.names(gene_exp) %in% clo_TE2$V4, ]
 
 # highly/lowly expressed genes for each stage
 stages <- colnames(gene_exp2)
-sink("3_2_TE_impact_distance_gene_TE_number.txt")
+sink("OUTPUT_3_TE_impact_distance_gene_TE_number.txt")
 
 for(stage in stages){
   vals <- gene_exp2[, stage, drop=FALSE]
@@ -169,7 +168,6 @@ for(stage in stages){
 sink()
 EOF
 
-
 # ====================
 # step 3: intersect with TE / without TE
 # ====================
@@ -194,7 +192,7 @@ for stage in "${stages[@]}"; do
             bedtools intersect -a "$input" -b expressed_TE.bed > "$wTE"
 
             for type in CG CHG CHH; do
-                bedtools intersect -a "$wTE" -b "${stage}_${type}.bed" -wa -wb > "wTE_${expr}_${stage}_${dir}_${type}.bed"
+                bedtools intersect -a "$wTE" -b "pre_step3/pre3_${stage}_${type}.bed" -wa -wb > "wTE_${expr}_${stage}_${dir}_${type}.bed"
             done
 
             rm -f "$wTE" 
@@ -364,7 +362,7 @@ for(type in types){    # "CG","CHG","CHH"
 
   #plot
   #write.table(low_up,"testtestpng.txt", row.names=F, col.names=F, quote=F, sep="\t")
-  png(file=paste0(stage,"_distance_updown_TEm",type,"_HighLowGene.png"), width=5000, height=2000, res=400)
+  png(file=paste0("OUTPUT_3_TE_impact_distance_",stage,"_",type,".png"), width=5000, height=2000, res=400)
 
   p<- ggplot() +
   geom_point(df_point_all, mapping=aes(x=dist_shift,y=V11,color=expr), size=0.01, alpha=0.1) +
@@ -396,6 +394,7 @@ wait
 end_step5=$(date +%s)
 echo "[`date`] Step 4. finished in $((end_step5-start_step5)) sec"  | tee -a $LOG
 
+rm wTE_*.bed low_* high_* expgene_closest_expTE.bed expressed_gene.bed expressed_TE.bed
 
 end_allall=$(date +%s)
 echo "[`date`] Pipeline finished in $((end_allall-start_allall)) sec" | tee -a $LOG
