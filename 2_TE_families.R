@@ -76,10 +76,13 @@ for(i in seq_len(nrow(df_TE))){
   p_list[i] <- fisher.test(contingency)$p.value
 }
 
-df_TE$pvalue_num <- p_list     
+df_TE$pvalue_num <- p_list              # 用於排序
+out_df_TE<-df_TE
+
 df_TE$pvalue <- format.pval(p_list, digits=3, scientific=TRUE)
 
-write.table(df_TE, file="Promoter_embedded_TE_family.txt", sep="\t", quote=F, row.names=T)
+colnames(out_df_TE)<-c("TE family","All TEs", "Promoter-embedded TEs", "All TEs (%)", "Promoter-embedded TEs (%)", "Enrichment", "pvalue")
+write.table(out_df_TE, file="OUTPUT_2_Promoter_embedded_TE_family.txt", sep="\t", quote=F, row.names=F)
 
 # labels
 df_TE$text <- paste0(df_TE$TE, " (", sprintf("%.2f", df_TE$enrich), ", p=", df_TE$pvalue, ")")
@@ -88,7 +91,7 @@ df_TE$text_y <- 100-(cumsum(df_TE$pc_df2) - df_TE$pc_df2/2)
 # long format (不用 tidyr)
 df_long <- data.frame(
   TE = rep(df_TE$TE, times=2),
-  type = rep(c("All TEs","Inserted TEs"), each=nrow(df_TE)),
+  type = rep(c("All TEs","Promoter-\nembedded TEs"), each=nrow(df_TE)),
   percentage = c(df_TE$pc_df1, df_TE$pc_df2),
   stringsAsFactors=FALSE
 )
@@ -112,24 +115,24 @@ df_label$text_y <- seq(25, 75, length.out = nrow(df_label))
 df_label$y_end <- df_label$text_y
 
 # Plot
-png(file="Promoter_embedded_TE_family_enrichment.png", width=4500, height=2200, res=400)
+png(file="OUTPUT_2_Promoter_embedded_TE_family_enrichment.png", width=4500, height=2200, res=400)
 
 ggplot(df_long, aes(x = type, y = percentage, alluvium = TE)) +
   geom_alluvium(aes(fill = TE), width = 0.3, alpha = 0.6) +
   geom_stratum(aes(stratum = TE, fill = TE), width = 0.3) +
-
+  # 實線連接 bar 和文字
   geom_segment(data = df_label,
                aes(x = 2.12, xend = 2.5, y = y_start, yend = y_end),
                color = "gray30", linewidth = 0.7, inherit.aes = FALSE) +
-
+  # 標註文字
   geom_text(data = df_label,
             aes(x = 2.6, y = y_end, label = text),
             hjust = 0, size = 6, inherit.aes = FALSE) +
-  scale_x_discrete(limits = c("All TEs", "Inserted TEs", "", "", "")) +
+  scale_x_discrete(limits = c("All TEs", "Promoter-\nembedded TEs", "", "", "")) +
   scale_y_continuous(limits = c(0,100), expand=c(0,0)) +
   scale_fill_hue(c = 50, l = 70, h = c(10, 280)) +
   theme_classic() +
-  labs(title = "Enriched families of inserted TEs", x="", y="Percentage", fill="TE Types") +
+  labs(title = "Enriched families of promoter-embedded TEs", x="", y="Percentage (%)", fill="TE Types") +
   theme(
     text = element_text(size=20),
     plot.title = element_text(hjust=0.5),
