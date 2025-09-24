@@ -85,10 +85,10 @@ fi
 if [[ "$run1" == "y" ]]; then
   read -p "CDS BED file: " cds_bed
   [[ ! -f "$cds_bed" ]] && { echo "Error: $cds_bed not found"; exit 1; }
-  read -p "5'UTR BED file: " utr5_bed
-  [[ ! -f "$utr5_bed" ]] && { echo "Error: $utr5_bed not found"; exit 1; }
   read -p "Exon BED file: " exon_bed
   [[ ! -f "$exon_bed" ]] && { echo "Error: $exon_bed not found"; exit 1; }
+  read -p "5'UTR BED file: " utr5_bed
+  [[ ! -f "$utr5_bed" ]] && { echo "Error: $utr5_bed not found"; exit 1; }
   read -p "3'UTR BED file: " utr3_bed
   [[ ! -f "$utr3_bed" ]] && { echo "Error: $utr3_bed not found"; exit 1; }
 fi
