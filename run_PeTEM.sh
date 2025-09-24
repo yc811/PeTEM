@@ -133,29 +133,16 @@ fi
 
 # Step 0 + 3-1 parallel if both selected
 if [[ "$run0" == "y" || "$run3_1" == "y" ]]; then
-    # create new folder and execute 3 in this folder
-    if [[ "$run3_1" == "y" ]]; then
-        mkdir -p 3_distance
-        ln -sf "$gene_bed" 3_distance/
-        ln -sf "$te_bed" 3_distance/
-        [[ "$run0" == "y" ]] && ln -sf "$faidx" 3_distance/
-        for f in "${meth_files[@]:-}"; do
-            [[ -f "$f" ]] && ln -sf "$f" 3_distance/
-        done
-    fi
-
     if [[ "$run0" == "y" && "$run3_1" == "y" ]]; then
         bash 0_preprocessing.sh -g "$gene_bed" -t "$te_bed" -eg "$gene_exp" -et "$te_exp" -fai "$faidx" -up "$up" -dn "$dn" -m "${meth_files[@]}" &
         pid0=$!
-        pushd 3_distance >/dev/null
-        bash ../3_1_TE_impact_distance_preprocess.sh &
+        bash 3_1_TE_impact_distance_preprocess.sh &
         pid3_1=$!
-        popd >/dev/null
         wait $pid0
         wait $pid3_1
     else
         [[ "$run0" == "y" ]] && bash 0_preprocessing.sh -g "$gene_bed" -t "$te_bed" -eg "$gene_exp" -et "$te_exp" -fai "$faidx" -up "$up" -dn "$dn" -m "${meth_files[@]}"
-        [[ "$run3_1" == "y" ]] && (pushd 3_distance >/dev/null; bash ../3_1_TE_impact_distance_preprocess.sh; popd >/dev/null)
+        [[ "$run3_1" == "y" ]] && bash ../3_1_TE_impact_distance_preprocess.sh
     fi
 fi
 
@@ -163,18 +150,18 @@ fi
 [[ "$run1" == "y" ]] && bash 1_TE_distribution.sh \
   -g "$gene_bed" -c "$cds_bed" \
   -5 "$utr5_bed" -e "$exon_bed" -3 "$utr3_bed" \
-  -p promoter_u1500_d500.bed -t "$te_bed" -fai "$faidx"
+  -p promoter.bed -t "$te_bed" -fai "$faidx"
 
 # Step 2
-[[ "$run2" == "y" ]] && Rscript 2_TE_families.R -a "$te_bed" -i TE_overlap_promoter_u1500_d500.bed -T "$te_family"
+[[ "$run2" == "y" ]] && Rscript 2_TE_families.R -a "$te_bed" -i TE_overlap_promoter.bed -T "$te_family"
 
 # Step 3-2
-[[ "$run3_2" == "y" ]] && (pushd 3_distance >/dev/null; bash ../3_2_TE_impact_distance_plot.sh -g "$gene_bed" -t "$te_bed" -eg "$gene_exp" -et "$te_exp" -lim "$limit" -tick "$tick" -WD "$window" -unexp "$unexp" ; popd >/dev/null)
+[[ "$run3_2" == "y" ]] && bash 3_2_TE_impact_distance_plot.sh -g "$gene_bed" -t "$te_bed" -eg "$gene_exp" -et "$te_exp" -lim "$limit" -tick "$tick" -WD "$window" -unexp "$unexp" 
 
 # Step 4
-[[ "$run4" == "y" ]] && Rscript 4_single_condition_correlation.R -eg "$gene_exp" -et "$te_exp" -unexp "$unexp" --wd_num "$wd_num" --ylim_CG "$ylim_cg" --ylim_CHG "$ylim_chg" --ylim_CHH "$ylim_chh" --ylim_TEexpTEmC_CH "$ylim_te_ch" --ylim_TEexpTEmC_CG "$ylim_te_cg"
+[[ "$run4" == "y" ]] && Rscript 4_single_condition_correlation.R --eg "$gene_exp" --et "$te_exp" --unexp "$unexp" --wd_num "$wd_num" --ylim_CG "$ylim_cg" --ylim_CHG "$ylim_chg" --ylim_CHH "$ylim_chh" --ylim_TEexpTEmC_CH "$ylim_te_ch" --ylim_TEexpTEmC_CG "$ylim_te_cg"
 
 # Step 5 (use raw DEG/DETE directly)
-[[ "$run5" == "y" ]] && Rscript 5_cross_condition_correlation.R -deg "$deg_file" -det "$dete_file" -unexp "$unexp" 
+[[ "$run5" == "y" ]] && Rscript 5_cross_condition_correlation.R --DEG "$deg_file" --DETE "$dete_file" --unexp "$unexp" 
 
 echo "[DONE] Pipeline completed successfully."
