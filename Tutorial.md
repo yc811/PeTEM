@@ -38,6 +38,11 @@ We provide example input files under [`PeTEM_data/`](PeTEM_data) to test the pip
 ## Running the pipeline
 PeTEM provides an interactive bash script `run_PeTEM.sh` to select steps and input files.
 
+### Step 0: Link the example data to the current path
+```
+ln -sf PeTEM_data/* .
+```
+
 ### Step 1: Launch the interactive pipeline
 ```
 bash run_PeTEM.sh
