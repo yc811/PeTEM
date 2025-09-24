@@ -2,18 +2,21 @@
 
 set -euo pipefail
 
+LOG="LOG_3_1_TE_impact_distance_preprocess.log"
+
 start_step=$(date +%s)
 
 echo "[`date`] Preprocess methylation files: (1) unzip + filter" | tee -a $LOG
 
-mkdir -p methylation
+rm -rf pre_step3
+mkdir -p pre_step3
 
 # Step1: unzip + filter
 for f in *.CGmap.gz; do
 (
     start=$(date +%s)
     base=${f%.CGmap.gz}
-    gunzip -c "$f" | awk '$8>=4 {print $1"\t"$3"\t"$2"\t"$4"\t"$6}' > "methylation/${base}.txt"
+    gunzip -c "$f" | awk '$8>=4 {print $1"\t"$3"\t"$2"\t"$4"\t"$6}' > "pre_step3/${base}.txt"
     end=$(date +%s)
     echo "[INFO] Preprocessed $f in $((end-start)) sec"
 )&
@@ -23,7 +26,7 @@ echo "[INFO] All replicates done."   | tee -a $LOG
 
 echo "[`date`] Preprocess methylation files: (2) calculate average mC of each site at each stage"   | tee -a $LOG
 
-stages=($(ls methylation/*.txt | xargs -n1 basename | cut -d'_' -f1 | sort -u))
+stages=($(ls pre_step3/*.txt | xargs -n1 basename | cut -d'_' -f1 | sort -u))
 
 for stage in "${stages[@]}"; do
 (
@@ -32,7 +35,7 @@ for stage in "${stages[@]}"; do
     python3 - <<EOF
 import pandas as pd, glob, os, time
 stage = "${stage}"
-files = glob.glob(f"methylation/{stage}_*.txt")
+files = glob.glob(f"pre_step3/{stage}_*.txt")
 
 dfs=[]
 for f in files:
@@ -48,8 +51,8 @@ m["strand"]=m.nt.replace({"C":"+","G":"-"})
 m["name"]=["site_"+str(i+1) for i in range(len(m))]
 
 for type in ["CG","CHG","CHH"]:
-    sub=m[m.CNN==t][["chr","site","site","name",f"{stage}_mC","strand"]].dropna()
-    sub.to_csv(f"{stage}_{type}.bed",sep="\t",index=False,header=False)
+    sub=m[m.CNN==type][["chr","site","site","name",f"{stage}_mC","strand"]].dropna()
+    sub.to_csv(f"pre_step3/pre3_{stage}_{type}.bed",sep="\t",index=False,header=False)
 EOF
     end=$(date +%s)
     echo "[INFO] Stage $stage done in $((end-start)) sec"   | tee -a $LOG
