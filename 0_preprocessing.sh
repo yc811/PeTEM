@@ -66,7 +66,7 @@ START=$(date +%s)
 # promoter
 echo "[STEP 1] Preprocessing annotations..."
 
-python3 <<'EOF'
+python3 - "$GENE" "$UP" "$DN" <<EOF
 import pandas as pd
 gene2 = pd.read_csv("${GENE}",sep="\t",header=None)
 gene3 = gene2.copy()
@@ -89,13 +89,19 @@ EOF
 bedtools intersect -a "$TE" -b promoter.bed -wa -wb > TE_overlap_promoter.bed
 
 # count TE overlap with promoters
-Rscript - << 'EOF'
-te_bed <- read.table("TE.bed", sep="\t", header=FALSE)
-gene_bed <- read.table("gene.bed", sep="\t", header=FALSE)
-overlap <- read.table("TE_overlap_promoter_u1500_d500.bed", sep="\t", header=FALSE)
+Rscript - "$TE" "$GENE" "$TE_EXP" "$GENE_EXP" <<'EOF'
+args <- commandArgs(trailingOnly=TRUE)
+te_file <- args[1]
+gene_file <- args[2]
+te_exp_file <- args[3]
+gene_exp_file <- args[4]
 
-te_exp <- read.table("tttTE.txt", header=TRUE, row.names=1, check.names=FALSE)
-gene_exp <- read.table("tttgene.txt", header=TRUE, row.names=1, check.names=FALSE)
+te_bed <- read.table(te_file, sep="\t", header=FALSE)
+gene_bed <- read.table(gene_file, sep="\t", header=FALSE)
+overlap <- read.table("TE_overlap_promoter.bed", sep="\t", header=FALSE)
+
+te_exp <- read.table(te_exp_file, header=TRUE, row.names=1, check.names=FALSE)
+gene_exp <- read.table(gene_exp_file, header=TRUE, row.names=1, check.names=FALSE)
 
 te_exp <- te_exp[rowSums(te_exp) != 0, , drop=FALSE]
 gene_exp <- gene_exp[rowSums(gene_exp) != 0, , drop=FALSE]
@@ -130,17 +136,16 @@ gene_tab <- matrix(c(a,b,c,d), nrow=2, byrow=TRUE,
 gene_chi <- chisq.test(gene_tab)
 
 # Output txt
-sink("0_embedded_TE_gene_number.txt")
-cat("## TE expression vs promoter embedding\n\n")
+sink("OUTPUT_0_embedded_TE_gene_number.txt")
+cat("########## TE expression vs promoter embedding ##########\n\n")
 print(te_tab)
-cat("\nChi-squared p =", te_chi\$p.value, "\n\n")
+cat("\nChi-squared p =", te_chi$p.value, "\n\n\n\n")
 
-cat("## Gene expression vs promoter has TE\n\n")
+cat("########## Gene expression vs promoter has TE ##########\n\n")
 print(gene_tab)
-cat("\nChi-squared p =", gene_chi\$p.value, "\n")
+cat("\nChi-squared p =", gene_chi$p.value, "\n")
 sink()
 EOF
-
 
 
 
@@ -189,6 +194,7 @@ for f in "${METH_FILES[@]}"; do
 ) &
 
 done
+
 
 wait
 
@@ -242,7 +248,7 @@ process_group <- function(feature, ctx){
   names(wide) <- sub("^value\\.", "", names(wide))
 
   # output
-  out <- paste0(feature,"_",ctx,"_tab.txt")
+  out <- paste0("Tab_",feature,"_",ctx,".txt")
   write.table(wide, file=out, sep="\t", quote=F, row.names=F)
   message("Wrote: ", out)
 }
@@ -263,6 +269,7 @@ RUNTIME=$((END-START))
 echo "[DONE] All outputs generated."
 echo "[TIME] Total runtime: $RUNTIME seconds ($((RUNTIME/60)) min)"
 
+rm overlapped_promoter.bed overlapped_promoterselves.bed overlapped_promoterselves_uniq.bed overlapped_promoterselves_uniq_rename.bed
 mkdir wig_bw_tab
 mv *.tab *.bw *.wig wig_bw_tab
 
