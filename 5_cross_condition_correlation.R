@@ -1,4 +1,4 @@
-# Rscript 5_cross_condition_correlation.R -deg DEG.txt -det DETE.txt -unexp "$unexp" 
+# Rscript 5_cross_condition_correlation.R --DEG DEG.txt --DETE DETE.txt --unexp "$unexp" 
 
 start_time <- Sys.time()
 
@@ -12,15 +12,15 @@ library(stringr)
 
 #---- Option parser ----
 option_list = list(
-  make_option(c("-deg", "--DEG"), type="character", help="Gene expression DEG file"),
-  make_option(c("-det", "--DETE"), type="character", help="TE expression DETE file"),
-  make_option(c("-unexp", "--include_unexp"), type="character", default="n", help="Include unexpressed TEs? (y/n)")
+  make_option(c("--DEG"), type="character", help="Gene expression DEG file"),
+  make_option(c("--DETE"), type="character", help="TE expression DETE file"),
+  make_option(c("--unexp"), type="character", default="n", help="Include unexpressed TEs? (y/n)")
 )
 
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
 
-include_unexp <- tolower(opt$include_unexp) == "y"
+include_unexp <- tolower(opt$unexp) == "y"
 
 
 #---- Helper functions ----
@@ -109,9 +109,9 @@ colnames(gene_exp) <- gsub("^FDR_", "FDR_g_", colnames(gene_exp))
 colnames(TE_exp)   <- gsub("^FDR_", "FDR_TE_", colnames(TE_exp))
 
 #---- Read methylation ----
-CG_TE  <- read.table("TE_CG_tab.txt", header=TRUE, sep="\t")
-CHG_TE <- read.table("TE_CHG_tab.txt", header=TRUE, sep="\t")
-CHH_TE <- read.table("TE_CHH_tab.txt", header=TRUE, sep="\t")
+CG_TE  <- read.table("Tab_TE_CG.txt", header=TRUE, sep="\t")
+CHG_TE <- read.table("Tab_TE_CHG.txt", header=TRUE, sep="\t")
+CHH_TE <- read.table("Tab_TE_CHH.txt", header=TRUE, sep="\t")
 
 # follow order of stages in delta expression files
 fc_cols <- grep("^dexp_", colnames(gene_exp), value=TRUE)
@@ -149,7 +149,7 @@ plot_gene_TE_box <- function(df_subset, mC_type, si, sj, mode="Q2"){
   # output gene-TE pair
   out_tbl <- df_subset[,c("gene_id","TE_id")]
   write.table(out_tbl,
-              file=paste0(mode,"_gene_TE_pairs_", mC_type, "_", si, "_", sj,".txt"),
+              file=paste0("OUTPUT_5_",mode,"_gene_TE_pairs_", mC_type, "_", si, "_", sj,".txt"),
               sep="\t", row.names=FALSE, quote=FALSE)
   
   # expression
@@ -201,7 +201,7 @@ plot_gene_TE_box <- function(df_subset, mC_type, si, sj, mode="Q2"){
           axis.text.x=element_text(face="bold", size=18),
           axis.text.y=element_text(face="bold", size=18))
   
-  ggsave(filename=paste0(mode,"_boxplot_", mC_type, "_", si, "_", sj,".png"), p, width=6, height=5)
+  ggsave(filename=paste0("OUTPUT_5_",mode,"_boxplot_", mC_type, "_", si, "_", sj,".png"), p, width=6, height=5)
   print(p)
 }
 
@@ -219,7 +219,7 @@ for(k in seq_along(fc_cols)){
   if(nrow(df_sub) > 0){
     plot_delta_scatter(df_sub,
       x_col, paste0("dTEexp_", si, "_", sj),
-      paste0("geneexp_TEexp_change_", si, "_", sj, "_scatter.png"),
+      paste0("OUTPUT_5_geneexp_TEexp_change_", si, "_", sj, "_scatter.png"),
       paste0("TE and gene expression changes\nbetween ", si, " and ", sj),
       expression(Delta~"Gene expression level (log2 RPKM FC)"),
       expression(Delta~"TE expression level (log2 RPKM FC)")
@@ -237,10 +237,10 @@ for(k in seq_along(fc_cols)){
       # scatter plot
       plot_delta_scatter(df_sub,
         x_col, y_col,
-        paste0("geneexp_TEm", mC_type, "_change_", si, "_", sj, "_scatter.png"),
+        paste0("OUTPUT_5_geneexp_TEm", mC_type, "_change_", si, "_", sj, "_scatter.png"),
         paste0("TE m", mC_type, " and gene expression changes\nbetween ", si, " and ", sj),
         expression(Delta~"Gene expression level (log2 RPKM FC)"),
-        expression(Delta~paste("TE", mC_type, "methylation level (%)"))
+        expression(Delta~paste("TE methylation level (%)"))
       )
       # Q2 boxplot
       df_Q2 <- subset(df_TE,
@@ -274,10 +274,10 @@ for(k in seq_along(fc_cols)){
     if(nrow(df_sub) > 0){
       plot_delta_scatter(df_sub,
         x_TE_col, y_TE_col,
-        paste0("TEexp_TEm", mC_type, "_change_", si, "_", sj, "_scatter.png"),
+        paste0("OUTPUT_5_TEexp_TEm", mC_type, "_change_", si, "_", sj, "_scatter.png"),
         paste0("TE m", mC_type, " and TE expression changes\nbetween ", si, " and ", sj),
         expression(Delta~"TE expression level (log2 RPKM FC)"),
-        expression(Delta~paste("TE", mC_type, "methylation level (%)"))
+        expression(Delta~paste("TE methylation level (%)"))
       )
     }
   }
