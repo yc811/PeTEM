@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-# Rscript 4_single_condition_correlation.R -eg expression_gene.txt -et expression_TE.txt -unexp y/n \
+# Rscript 4_single_condition_correlation.R --eg expression_gene.txt --et expression_TE.txt --unexp y/n \
 #   --wd_num 156 --ylim_CG 40 --ylim_CHG 5 --ylim_CHH 5 --ylim_TEexpTEmC_CH 8 --ylim_TEexpTEmC_CG 40
 
 
@@ -12,9 +12,9 @@ library(optparse)
 
 #---- Option parser ----
 option_list = list(
-  make_option(c("-eg", "--geneexp"), type="character", help="Gene expression file"),
-  make_option(c("-et", "--TEexp"), type="character", help="TE expression file"),
-  make_option(c("-unexp", "--include_unexp"), type="character", default="n", help="Include unexpressed TEs for sliding plots? (y/n)"),
+  make_option(c("--eg"), type="character", help="Gene expression file"),
+  make_option(c("--et"), type="character", help="TE expression file"),
+  make_option(c("--unexp"), type="character", default="n", help="Include unexpressed TEs for sliding plots? (y/n)"),
   make_option(c("--wd_num"), type="numeric", default=156, help="number of sliding window (default=156)"),
   make_option(c("--ylim_CG"), type="numeric", default=50, help="ylim for gene exp vs TE/promoter mC, CG (default=50)"),
   make_option(c("--ylim_CHG"), type="numeric", default=10, help="ylim for gene exp vs TE/promoter mC, CHG (default=10)"),
@@ -26,7 +26,7 @@ option_list = list(
 opt_parser = OptionParser(option_list=option_list)
 opt = parse_args(opt_parser)
 
-include_unexp <- tolower(opt$include_unexp) == "y"
+include_unexp <- tolower(opt$unexp) == "y"
 
 #---- Functions ----
 sort_exp <- function(df, stage_exp){
@@ -70,11 +70,11 @@ corr_exp <- function(df, x, y, method="pearson") {
   data.frame(Corr=corr$estimate, Pvalue=corr$p.value, row.names=paste(x, y, sep="_vs_"))
 }
 
-plot_corr_bar <- function(stage, gdf, TEdf, method="pearson") {
+plot_corr_bar <- function(stage, gdf, gdfexp, TEdf, method="pearson") {
   # correlations
   TEexp_TEmC_corr <- corr_mC(TEdf, paste0(stage,"_TEexp"), paste0(stage,"_TE_CG"), paste0(stage,"_TE_CHG"), paste0(stage,"_TE_CHH"), method=method)
   exp_TEmC_corr   <- corr_mC(gdf, paste0(stage,"_exp"), paste0(stage,"_TE_CG"), paste0(stage,"_TE_CHG"), paste0(stage,"_TE_CHH"), method=method)
-  exp_TEexp_corr  <- corr_exp(gdf, paste0(stage,"_exp"), paste0(stage,"_TEexp"), method=method)
+  exp_TEexp_corr  <- corr_exp(gdfexp, paste0(stage,"_exp"), paste0(stage,"_TEexp"), method=method)
   
   # combine
   corr_df <- data.frame(
@@ -96,7 +96,7 @@ plot_corr_bar <- function(stage, gdf, TEdf, method="pearson") {
   # plot
   xmin <- min(corr_df$Corr, na.rm=TRUE) - 0.1
   xmax <- max(corr_df$Corr, na.rm=TRUE) + 0.1
-  outfile <- paste0(method,"_correlation_bar_",stage,".png")
+  outfile <- paste0("OUTPUT_4_",method,"_correlation_bar_",stage,".png")
   png(file=outfile,width=2000,height=1500,res=400)
   print(
     ggplot(corr_df, aes(x=Corr,y=Comparison,fill=Color)) +
@@ -118,11 +118,11 @@ plot_corr_bar <- function(stage, gdf, TEdf, method="pearson") {
 
 
 #---- Read expression ----
-gene_exp <- read.table(opt$geneexp, header=TRUE, sep="\t", row.names=1)
+gene_exp <- read.table(opt$eg, header=TRUE, sep="\t", row.names=1)
 #gene_exp<-read.table("tttgene.txt", header=T, sep="\t", row.names=1) 
 gene_exp <- gene_exp[rowSums(gene_exp) != 0, , drop=FALSE]  # drop unexpressed genes
 
-TE_exp <- read.table(opt$TEexp, header=TRUE, sep="\t", row.names=1)
+TE_exp <- read.table(opt$et, header=TRUE, sep="\t", row.names=1)
 #TE_exp<-read.table("tttTE.txt", header=T, sep="\t", row.names=1) 
 #TE_exp <- TE_exp[rowSums(TE_exp) != 0, ]
 
@@ -130,21 +130,21 @@ TE_exp <- read.table(opt$TEexp, header=TRUE, sep="\t", row.names=1)
 stages <- intersect(colnames(gene_exp), colnames(TE_exp))
 
 #---- Read methylation ----
-CG_TE <- read.table("TE_CG_tab.txt", header=TRUE, sep="\t")
-CHG_TE <- read.table("TE_CHG_tab.txt", header=TRUE, sep="\t")
-CHH_TE <- read.table("TE_CHH_tab.txt", header=TRUE, sep="\t")
+CG_TE <- read.table("Tab_TE_CG.txt", header=TRUE, sep="\t")
+CHG_TE <- read.table("Tab_TE_CHG.txt", header=TRUE, sep="\t")
+CHH_TE <- read.table("Tab_TE_CHH.txt", header=TRUE, sep="\t")
 
-CG_gene <- read.table("gene_CG_tab.txt", header=TRUE, sep="\t")
-CHG_gene <- read.table("gene_CHG_tab.txt", header=TRUE, sep="\t")
-CHH_gene <- read.table("gene_CHH_tab.txt", header=TRUE, sep="\t")
+CG_gene <- read.table("Tab_gene_CG.txt", header=TRUE, sep="\t")
+CHG_gene <- read.table("Tab_gene_CHG.txt", header=TRUE, sep="\t")
+CHH_gene <- read.table("Tab_gene_CHH.txt", header=TRUE, sep="\t")
 
-CG_promoter <- read.table("promoter_CG_tab.txt", header=TRUE, sep="\t")
-CHG_promoter <- read.table("promoter_CHG_tab.txt", header=TRUE, sep="\t")
-CHH_promoter <- read.table("promoter_CHH_tab.txt", header=TRUE, sep="\t")
+CG_promoter <- read.table("Tab_promoter_CG.txt", header=TRUE, sep="\t")
+CHG_promoter <- read.table("Tab_promoter_CHG.txt", header=TRUE, sep="\t")
+CHH_promoter <- read.table("Tab_promoter_CHH.txt", header=TRUE, sep="\t")
 
-CG_promoterselves <- read.table("promoterselves_CG_tab.txt", header=TRUE, sep="\t")
-CHG_promoterselves <- read.table("promoterselves_CHG_tab.txt", header=TRUE, sep="\t")
-CHH_promoterselves <- read.table("promoterselves_CHH_tab.txt", header=TRUE, sep="\t")
+CG_promoterselves <- read.table("Tab_promoterselves_CG.txt", header=TRUE, sep="\t")
+CHG_promoterselves <- read.table("Tab_promoterselves_CHG.txt", header=TRUE, sep="\t")
+CHH_promoterselves <- read.table("Tab_promoterselves_CHH.txt", header=TRUE, sep="\t")
 CG_promoterselves$ID  <- sub("_[0-9]+$", "", CG_promoterselves$ID)
 CHG_promoterselves$ID <- sub("_[0-9]+$", "", CHG_promoterselves$ID)
 CHH_promoterselves$ID <- sub("_[0-9]+$", "", CHH_promoterselves$ID)
@@ -268,7 +268,7 @@ for(stage in stages){
   pro_woTE_col <- "#BFBFBF"
   
   # TE exp vs TE mC
-  png(file=paste0("TEexp_TEmC_line_",stage,".png"), width=2600,height=2200,res=400)
+  png(file=paste0("OUTPUT_4_TEexp_TEmC_line_",stage,".png"), width=2600,height=2200,res=400)
   par(mar=c(5,4.5,4,5)+0.1)
   plot(TE_CHG,lwd=5,lty=1,col=CHG_col,type="l",axes=FALSE,
        ylim=c(0,opt$ylim_TEexpTEmC_CH),xlim=c(0,opt$wd_num),xlab=NA,ylab=NA,xaxt='n')
@@ -287,7 +287,7 @@ for(stage in stages){
   dev.off()
   
   # gene exp vs TE exp
-  png(file=paste0("geneexp_TEexp_line_",stage,".png"), width=2600,height=2200,res=400)
+  png(file=paste0("OUTPUT_4_geneexp_TEexp_line_",stage,".png"), width=2600,height=2200,res=400)
   par(mar=c(5,4.5,4,5)+0.1)
   plot(gTE_exp,lwd=5,lty=1,col="gray50",type="l",axes=FALSE,xlim=c(0,opt$wd_num),xlab=NA,ylab=NA,xaxt='n')
   axis(2, ylim=c(0,1),col="black",las=1, cex.axis=1.5,font=2)
@@ -300,7 +300,7 @@ for(stage in stages){
   
   # gene exp vs TE/promoter mC
   for(mtype in c("CG","CHG","CHH")){
-    png(file=paste0("geneexp_TEm",mtype,"_line_",stage,".png"), width=2600,height=2200,res=400)
+    png(file=paste0("OUTPUT_4_geneexp_TEm",mtype,"_line_",stage,".png"), width=2600,height=2200,res=400)
     par(mar=c(5, 5, 4, 5)+0.1)
     ylim_val <- switch(mtype, CG=opt$ylim_CG, CHG=opt$ylim_CHG, CHH=opt$ylim_CHH)
     plot(get(paste0("wo",mtype)), lwd=5,lty=1,col=pro_woTE_col,type="l",axes=FALSE,
@@ -313,8 +313,7 @@ for(stage in stages){
     legend("topright", c("TE", "Promoters w TEs", "Promoters w/o TEs"), text.font=2, bty='n', lty=1, lwd=5, col=c(CG_col, pro_wTE_col, pro_woTE_col), cex=1.8)
     box()
     grid(nx=NA, ny=NULL, col="gray70", lty=3, lwd=1)
-    mtext(paste0("TE-gene pairs: ", nrow(gdf), ", window size: ", g_window), side=1, line=4, cex=1.2)
-    mtext(paste0("Promoters w/o TEs: ", nrow(wo), ", window size: ", wo_window), side=1, line=5, cex=1.2)
+    mtext(paste0("TE-gene pairs: ", nrow(gdf), ", window size: ", g_window, "; Promoters w/o TEs: ", nrow(wo), ", window size: ", wo_window), side=1, line=4, cex=0.8)
     dev.off()
   }
 
@@ -322,9 +321,9 @@ for(stage in stages){
   
   # Correlation tables
   # Pearson
-  plot_corr_bar(stage, gdf, TEdf, method="pearson")
+  plot_corr_bar(stage, gdf, gdfexp, TEdf, method="pearson")
   # Spearman
-  plot_corr_bar(stage, gdf, TEdf, method="spearman")
+  plot_corr_bar(stage, gdf, gdfexp, TEdf, method="spearman")
 }
 
 end_time <- Sys.time()
