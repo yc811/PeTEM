@@ -94,11 +94,11 @@ plot_bar <- function(values, ylab, title, yuplim){
 }
 
 #------------------
-png("01_TE_distribution_enrichment.png", width=2000, height=1800, res=300)
+png("OUTPUT_1_TE_distribution_enrichment.png", width=2000, height=1800, res=300)
 plot_bar(TEinsert_enrich, "Log2 enrichment", "TE distribution", 1.8)
 dev.off()
 
-png("01_TE_distribution_percentage.png", width=2000, height=1800, res=300)
+png("OUTPUT_1_TE_distribution_percentage.png", width=2000, height=1800, res=300)
 plot_bar(TE_insertion2, "Percentage (%)", "TE distribution", 1.2)
 dev.off()
 
