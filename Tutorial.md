@@ -62,17 +62,17 @@ You will be prompted to select which steps to run (enter `y` or `n`):
 After selecting steps, you will be prompted to provide paths to necessary files.
 Use the example files in PeTEM_data:
 ```
-Gene BED file: PeTEM_data/gene.bed
-TE BED file: PeTEM_data/TE.bed
-Genome fasta index: PeTEM_data/TAIR10.fa.fai
-DEG file: PeTEM_data/DEG.txt
-DETE file: PeTEM_data/DETE.txt
-Methylation CGmap.gz files: PeTEM_data/WT_01.CGmap.gz PeTEM_data/WT_02.CGmap.gz PeTEM_data/drdd_01.CGmap.gz PeTEM_data/drdd_02.CGmap.gz
-CDS BED file: PeTEM_data/CDS.bed
-Exon BED file: PeTEM_data/exon.bed
-5' UTR BED file: PeTEM_data/UTR5.bed
-3' UTR BED file: PeTEM_data/UTR3.bed
-TE family file: PeTEM_data/TE_family.txt
+Gene BED file: gene.bed
+TE BED file: TE.bed
+Genome fasta index: TAIR10.fa.fai
+DEG file: DEG.txt
+DETE file: DETE.txt
+Methylation CGmap.gz files: WT_01.CGmap.gz WT_02.CGmap.gz drdd_01.CGmap.gz drdd_02.CGmap.gz
+CDS BED file: CDS.bed
+Exon BED file: exon.bed
+5' UTR BED file: UTR5.bed
+3' UTR BED file: UTR3.bed
+TE family file: TE_family.txt
 ```
 For parameters like promoter upstream/downstream length or plotting options, you can press `Enter` to use default values.
 
@@ -97,16 +97,27 @@ After successful completion, outputs will include:
 * Step 1:
     * `OUTPUT_1_TE_distribution_enrichment.png`
     * `OUTPUT_1_TE_distribution_percentage.png`
+      <img width="602" height="261" alt="image" src="https://github.com/user-attachments/assets/261594e5-2f99-4ce6-a73a-f6b0dd55c24d" />
+
 * Step 2:
     * `OUTPUT_2_Promoter_embedded_TE_family_enrichment.png`
     * `OUTPUT_2_Promoter_embedded_TE_family.txt`
+<img width="1557" height="420" alt="image" src="https://github.com/user-attachments/assets/0b1f2ee7-6b26-41c8-86fe-ab359850d527" />
+
 * Step 3:
     * `OUTPUT_3_TE_impact_distance_*.png`: Figures of TE CG/CHG/CHH methylation around highly/lowly expressed genes under every condition
     * `OUTPUT_3_TE_impact_distance_gene_TE_number.txt`: In every figure, it shows the upstream and downstream border (bp) of TE methylation impact, and the number of  highly/lowly expressed genes
+     <img width="1253" height="405" alt="image" src="https://github.com/user-attachments/assets/c538537a-283b-4055-8b20-7c64bbaf6384" />
+
 * Step 4:
     * `OUTPUT_4_geneexp/TEexp_*.png`: Line plots showing correlations between (1) TE methylation vs TE expression, (2) TE methylation, methylation of promoters with TEs/with no TEs vs gene expression, (3) TE expression vs gene expression under each stage. The TE-gene pairs number and the smoothing window size also showed in each figure.
     * `OUTPUT_4_correlation_*.png`: Bar plots showing pearson's or spearman's correlation coefficient between (1) TE CG/CHG/CHH methylation vs TE expression, (2) TE CG/CHG/CHH methylation vs gene expression, (3) TE expression vs gene expression under each stage
+  <img width="1022" height="934" alt="image" src="https://github.com/user-attachments/assets/44ce1c5e-7d89-48b0-bc22-cfef639a2fef" />
+
+
 * Step 5:
     * `OUTPUT_5_*_scatter.png`: Scatter plots showing correlations between changes of (1) TE CG/CHG/CHH methylation vs TE expression, (2) TE CG/CHG/CHH methylation vs gene expression, (3) TE expression vs gene expression comparing each two stages. The TE-gene pairs number and the regression line also showed in each figure.
     * `OUTPUT_5_Q2/4_boxplot_*.png`: Box plots showing the expression and methylation level changes of those negatively correlated gene-TE pairs under each two stages.
     * `OUTPUT_5_Q2/4_*.txt`: The name lists of those negatively correlated gene-TE pairs are also in the output.
+  <img width="1138" height="722" alt="image" src="https://github.com/user-attachments/assets/68b8bce7-a32d-415e-b066-81f75e03aa21" />
+
