@@ -58,7 +58,7 @@ You will be prompted to select which steps to run (enter `y` or `n`):
 5. Correlation across conditions? (y/n):
 ```
 
-## Step 2: Input files
+## Step 2: Input files and parameters
 After selecting steps, you will be prompted to provide paths to necessary files.
 Use the example files in PeTEM_data:
 ```
@@ -74,7 +74,21 @@ Exon BED file: exon.bed
 3' UTR BED file: UTR3.bed
 TE family file: TE_family.txt
 ```
-For parameters like promoter upstream/downstream length or plotting options, you can press `Enter` to use default values.
+For parameters like including unexpressed TEs, setting promoter regions, or plotting options, you can press `Enter` to use default values.
+```
+Include unexpressed TEs? (y/n, default n): y
+Promoter upstream length from TSS (default 1500): 1500
+Promoter downstream length from TSS (default 500): 500
+Limit up-/down-stream range (bp)(e.g. 15000): 15000
+Tick size (bp)(e.g. 5000): 5000
+Window size (bp)(e.g. 200): 400
+Window number (default 156):  100
+y-axis limit for gene expression vs TE/promoter mC plot (CG, default 50):  80
+y-axis limit for gene expression vs TE/promoter mC plot (CHG, default 10):  40
+y-axis limit for gene expression vs TE/promoter mC plot (CHH, default 10):  10
+y-axis limit for TE expression vs TE mC plot (CH, default 15):  40
+y-axis limit for TE expression vs TE mC plot (CG, default 30):  60
+```
 
 ## Step 3: Pipeline steps description
 | Step | Description                                            |
