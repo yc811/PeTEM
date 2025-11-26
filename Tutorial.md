@@ -62,17 +62,12 @@ You will be prompted to select which steps to run (enter `y` or `n`):
 After selecting steps, you will be prompted to provide paths to necessary files.
 Use the example files in PeTEM_data:
 ```
-Gene BED file: gene.bed
+Genomic features annotations GFF file: genomic_features.gff
 TE BED file: TE.bed
 Genome fasta index: TAIR10.fa.fai
-DEG file: DEG.txt
-DETE file: DETE.txt
+Gene expression file: gene_exp.txt
+TE expression file: TE_exp.txt
 Methylation CGmap.gz files: WT_01.CGmap.gz WT_02.CGmap.gz drdd_01.CGmap.gz drdd_02.CGmap.gz
-CDS BED file: CDS.bed
-Exon BED file: exon.bed
-5' UTR BED file: UTR5.bed
-3' UTR BED file: UTR3.bed
-TE family file: TE_family.txt
 ```
 For parameters like including unexpressed TEs, setting promoter regions, or plotting options, you can press `Enter` to use default values.
 ```
